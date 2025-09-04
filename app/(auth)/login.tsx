@@ -53,7 +53,7 @@ export default function SignIn() {
   };
 
   const handleCreateAccount = () => {
-    router.push('/auth/signup');
+    router.push('/register');
   };
 
   return (

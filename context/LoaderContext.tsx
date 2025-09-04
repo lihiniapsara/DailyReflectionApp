@@ -9,7 +9,7 @@ interface LoaderContextType {
 const LoaderContext = createContext<LoaderContextType | undefined>(undefined)
 
 export const LoaderProvider = ({ children }: { children: ReactNode }) => {
-  const [visible, setVisible] = useState(false) 
+  const [visible, setVisible] = useState(false)
 
   const showLoader = () => setVisible(true)
   const hideLoader = () => setVisible(false)
