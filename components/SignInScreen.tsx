@@ -1,44 +1,73 @@
-// components/SignInScreen.tsx
-import React, { useState } from 'react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
-type RootStackParamList = {
-  Home: undefined;
-  SignUp: undefined;
-  ForgotPassword: undefined;
-};
 
-type NavigationProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList>;
-};
-import { View, TextInput, Button, Text } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-
-const SignInScreen = ({ navigation }: NavigationProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+export default function SignIn() {
+  const router = useRouter();
   const { login } = useAuth();
 
-  const handleLogin = async () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSignIn = async () => {
     try {
+      setError("");
       await login(email, password);
-      navigation.navigate('Home');
-    } catch (e) {
-      setError('Failed to log in');
+      router.push("/"); // navigate to Home page
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
   return (
-    <View>
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-      {error && <Text>{error}</Text>}
-      <Button title="Sign In" onPress={handleLogin} />
-      <Button title="Sign Up" onPress={() => navigation.navigate('SignUp')} />
-      <Button title="Forgot Password" onPress={() => navigation.navigate('ForgotPassword')} />
+    <View style={styles.container}>
+      <Text style={styles.title}>Sign In</Text>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <TextInput
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <TextInput
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+      />
+      <Button title="Sign In" onPress={handleSignIn} />
     </View>
   );
-};
+}
 
-export default SignInScreen;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  input: {
+    width: "100%",
+    height: 45,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginBottom: 15,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  error: {
+    color: "red",
+    marginBottom: 10,
+  },
+});

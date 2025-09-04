@@ -1,75 +1,72 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { auth } from "../firebase";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  User
-} from "firebase/auth";
+  User,
+} from "firebase/auth"
+import { auth } from "../firebase"
 
 type AuthContextType = {
-  currentUser: User | null;
-  signup: (email: string, password: string) => Promise<any>;
-  login: (email: string, password: string) => Promise<any>;
-  logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-};
+  user: User | null
+  loading: boolean
+  signup: (email: string, password: string) => Promise<any>
+  login: (email: string, password: string) => Promise<any>
+  logout: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider")
   }
-  return context;
-};
+  return context
+}
 
 type AuthProviderProps = {
-  children: ReactNode;
-};
+  children: ReactNode
+}
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser)
+      setLoading(false)
+    })
+    return unsubscribe
+  }, [])
 
-  const signup = (email: string, password: string) => {
-    return createUserWithEmailAndPassword(auth, email, password);
-  };
+  const signup = (email: string, password: string) =>
+    createUserWithEmailAndPassword(auth, email, password)
 
-  const login = (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
-  };
+  const login = (email: string, password: string) =>
+    signInWithEmailAndPassword(auth, email, password)
 
-  const logout = () => {
-    return signOut(auth);
-  };
+  const logout = () => signOut(auth)
 
-  const resetPassword = (email: string) => {
-    return sendPasswordResetEmail(auth, email);
-  };
+  const resetPassword = (email: string) =>
+    sendPasswordResetEmail(auth, email)
 
   const value: AuthContextType = {
-    currentUser,
+    user,
+    loading,
     signup,
     login,
     logout,
     resetPassword,
-  };
+  }
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}

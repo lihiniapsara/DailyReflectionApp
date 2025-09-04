@@ -1,10 +1,28 @@
-import React from "react";
-import { View, Text } from "react-native";
+import { View, ActivityIndicator } from "react-native"
+import React, { useEffect } from "react"
+import { useRouter } from "expo-router"
+import { useAuth } from "../context/AuthContext"
 
-export default function Home() {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Daily Reflection App</Text>
-    </View>
-  );
+const Index = () => {
+  const router = useRouter()
+  const { user, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) router.replace("/home")
+      else router.replace("/login")
+    }
+  }, [user, loading])
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    )
+  }
+
+  return null
 }
+
+export default Index
