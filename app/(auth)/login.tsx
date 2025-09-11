@@ -79,7 +79,7 @@ export default function SignIn() {
 
   // Timer effect for OTP resend
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+let interval: number;
     if (resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer(prev => {
