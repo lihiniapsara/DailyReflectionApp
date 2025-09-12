@@ -91,18 +91,18 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <LinearGradient colors={['#E8D5FF', '#F8E8FF', '#FFE8D5']} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.contentContainer}>
-              <BlurView intensity={25} tint="light" style={styles.glassCard}>
+              <View style={styles.glassCard}>
 
                 {/* Header */}
                 <View style={styles.headerSection}>
-                  <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.iconContainer}>
+                  <View style={styles.iconContainer}>
                     <Ionicons name="leaf-outline" size={32} color="white" />
-                  </LinearGradient>
+                  </View>
                   <Text style={styles.welcomeTitle}>Join Us Today</Text>
                   <Text style={styles.subtitle}>Begin your journey of daily reflection</Text>
                 </View>
@@ -110,7 +110,7 @@ export default function SignUp() {
                 {/* General Error */}
                 {errors.general && (
                   <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+                    <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
                     <Text style={styles.errorText}>{errors.general}</Text>
                   </View>
                 )}
@@ -119,7 +119,7 @@ export default function SignUp() {
                 <View style={styles.inputSection}>
                   {/* Name */}
                   <View style={[styles.inputContainer, errors.name && styles.inputError]}>
-                    <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <Ionicons name="person-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                     <TextInput
                       placeholder="Full Name"
                       placeholderTextColor="#9CA3AF"
@@ -133,7 +133,7 @@ export default function SignUp() {
 
                   {/* Email */}
                   <View style={[styles.inputContainer, errors.email && styles.inputError]}>
-                    <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                     <TextInput
                       placeholder="Email"
                       placeholderTextColor="#9CA3AF"
@@ -148,7 +148,7 @@ export default function SignUp() {
 
                   {/* Password */}
                   <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                     <TextInput
                       placeholder="Password"
                       placeholderTextColor="#9CA3AF"
@@ -158,14 +158,14 @@ export default function SignUp() {
                       secureTextEntry={!showPassword}
                     />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9CA3AF" />
+                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6B7280" />
                     </TouchableOpacity>
                   </View>
                   {errors.password && <Text style={styles.fieldError}>{errors.password}</Text>}
 
                   {/* Confirm Password */}
                   <View style={[styles.inputContainer, errors.confirmPassword && styles.inputError]}>
-                    <Ionicons name="shield-checkmark-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <Ionicons name="shield-checkmark-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                     <TextInput
                       placeholder="Confirm Password"
                       placeholderTextColor="#9CA3AF"
@@ -175,7 +175,7 @@ export default function SignUp() {
                       secureTextEntry={!showConfirmPassword}
                     />
                     <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-                      <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9CA3AF" />
+                      <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6B7280" />
                     </TouchableOpacity>
                   </View>
                   {errors.confirmPassword && <Text style={styles.fieldError}>{errors.confirmPassword}</Text>}
@@ -200,40 +200,39 @@ export default function SignUp() {
                   disabled={isLoading}
                   style={[styles.signUpButton, isLoading && { opacity: 0.7 }]}
                 >
-                  <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
+                  <View style={styles.buttonGradient}>
                     {isLoading ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text style={styles.buttonText}>Create Account</Text>
                     )}
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Sign In */}
                 <TouchableOpacity onPress={handleSignIn} style={styles.signInButton}>
                   <Text style={styles.signInText}>Already have an account? Sign In</Text>
                 </TouchableOpacity>
-              </BlurView>
+              </View>
             </View>
           </ScrollView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// You can keep your original styles object as-is
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   keyboardAvoid: {
     flex: 1,
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -243,7 +242,7 @@ const styles = StyleSheet.create({
   },
   floatingCircle: {
     position: 'absolute',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
     borderRadius: 1000,
   },
   circle1: {
@@ -257,14 +256,14 @@ const styles = StyleSheet.create({
     height: 150,
     bottom: 100,
     right: -30,
-    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
   },
   circle3: {
     width: 120,
     height: 120,
     top: '40%',
     left: 10,
-    backgroundColor: 'rgba(251, 146, 60, 0.1)',
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
   },
   contentContainer: {
     width: width * 0.9,
@@ -273,17 +272,17 @@ const styles = StyleSheet.create({
   },
   glassCard: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'white',
     borderRadius: 24,
     padding: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -295,22 +294,23 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
+    backgroundColor: '#4B5563',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#8B5CF6',
+    shadowColor: '#4B5563',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
   },
   welcomeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#8B5CF6',
+    color: '#111827',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -322,15 +322,15 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#DC2626',
     fontSize: 14,
     marginLeft: 8,
     flex: 1,
@@ -342,18 +342,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: '#E5E7EB',
     paddingHorizontal: 16,
     paddingVertical: 4,
     marginBottom: 8,
     minHeight: 56,
   },
   inputError: {
-    borderColor: 'rgba(239, 68, 68, 0.5)',
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   inputIcon: {
     marginRight: 12,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   fieldError: {
-    color: '#EF4444',
+    color: '#DC2626',
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxActive: {
-    backgroundColor: '#8B5CF6',
-    borderColor: '#8B5CF6',
+    backgroundColor: '#4B5563',
+    borderColor: '#4B5563',
   },
   termsTextContainer: {
     flex: 1,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   termsLink: {
-    color: '#8B5CF6',
+    color: '#2563EB',
     fontWeight: '500',
   },
   signUpButton: {
@@ -417,12 +417,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#8B5CF6',
+    shadowColor: '#4B5563',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
   },
@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonGradient: {
+    backgroundColor: '#4B5563',
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -458,10 +459,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(156, 163, 175, 0.3)',
+    backgroundColor: '#E5E7EB',
   },
   dividerTextContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#F9FAFB',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
@@ -475,9 +476,9 @@ const styles = StyleSheet.create({
   },
   signInButton: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
