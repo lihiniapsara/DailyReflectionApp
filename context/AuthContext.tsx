@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 import { View, Text } from "react-native"; // React Native components
+import { router } from "expo-router";
 
 interface AuthContextType {
   user: User | null;
@@ -51,11 +52,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signup = async (email: string, password: string): Promise<User> => {
-    console.log("Signup උත්සාහය:", { email, password });
+  console.log("Signup try:", JSON.stringify({ email, password }, null, 2));
+  try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log("Signup සාර්ථකයි:", userCredential.user);
+    console.log("Signup Success:", JSON.stringify(userCredential.user, null, 2));
+    router.push("/login");
     return userCredential.user;
-  };
+  } catch (error: any) {
+    console.error("Signup Error:", JSON.stringify({ code: error.code, message: error.message }, null, 2));
+    throw error;
+  }
+};
 
   const login = async (email: string, password: string): Promise<User> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);

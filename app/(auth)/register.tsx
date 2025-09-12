@@ -87,7 +87,7 @@ export default function SignUp() {
     }
   };
 
-  const handleSignIn = () => router.push('/auth/signin');
+  const handleSignIn = () => router.push('/login');
 
   return (
     <SafeAreaView style={styles.container}>
