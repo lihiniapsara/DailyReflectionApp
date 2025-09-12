@@ -13,14 +13,12 @@ import {
   Modal,
   Animated
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const functions = getFunctions();
 
 interface SendOTPResponse {
@@ -77,9 +75,8 @@ export default function SignIn() {
     }
   }, [showForgotPasswordModal]);
 
-  // Timer effect for OTP resend
   useEffect(() => {
-let interval: number;
+    let interval: number;
     if (resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer(prev => {
@@ -234,43 +231,34 @@ let interval: number;
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      <LinearGradient
-        colors={['#E8D5FF', '#F8E8FF', '#FFE8D5']}
-        locations={[0, 0.5, 1]}
-        style={styles.backgroundGradient}
-      >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <View style={styles.backgroundGradient}>
         <View style={[styles.floatingCircle, styles.circle1]} />
         <View style={[styles.floatingCircle, styles.circle2]} />
         <View style={[styles.floatingCircle, styles.circle3]} />
-
         <View style={styles.contentContainer}>
-          <BlurView intensity={20} tint="light" style={styles.glassCard}>
+          <View style={styles.glassCard}>
             <View style={styles.headerSection}>
-              <LinearGradient
-                colors={['#8B5CF6', '#EC4899']}
-                style={styles.iconContainer}
-              >
-                <Ionicons name="sunny-outline" size={32} color="white" />
-              </LinearGradient>
+              <View style={styles.iconContainer}>
+                <Ionicons name="sunny-outline" size={32} color="#FFFFFF" />
+              </View>
               <Text style={styles.welcomeTitle}>Welcome Back</Text>
               <Text style={styles.subtitle}>Continue your daily reflection journey</Text>
             </View>
 
             {error ? (
               <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+                <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
             <View style={styles.inputSection}>
               <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#6B7280"
                   value={email}
                   onChangeText={setEmail}
                   style={styles.textInput}
@@ -281,10 +269,10 @@ let interval: number;
               </View>
 
               <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#6B7280"
                   value={password}
                   onChangeText={setPassword}
                   style={[styles.textInput, styles.passwordInput]}
@@ -298,7 +286,7 @@ let interval: number;
                   <Ionicons 
                     name={showPassword ? "eye-off-outline" : "eye-outline"} 
                     size={20} 
-                    color="#9CA3AF" 
+                    color="#6B7280" 
                   />
                 </TouchableOpacity>
               </View>
@@ -310,205 +298,21 @@ let interval: number;
               style={[styles.signInButton, isLoading && styles.buttonDisabled]}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={['#8B5CF6', '#EC4899']}
-                style={styles.buttonGradient}
-              >
+              <View style={styles.buttonGradient}>
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="white" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                     <Text style={styles.loadingText}>Signing In...</Text>
                   </View>
                 ) : (
                   <Text style={styles.buttonText}>Sign In</Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotButton}>
               <Text style={styles.forgotText}>Forgot your password?</Text>
             </TouchableOpacity>
-
-            {/* Forgot Password Modal */}
-            <Modal
-              visible={showForgotPasswordModal}
-              animationType="none"
-              transparent={true}
-              onRequestClose={() => setShowForgotPasswordModal(false)}
-            >
-              <View style={styles.modalOverlay}>
-                <Animated.View style={[styles.forgotPasswordModal, { transform: [{ scale: forgotModalScale }] }]}>
-                  <BlurView intensity={50} tint="light" style={styles.forgotPasswordModalInner}>
-                    <LinearGradient
-                      colors={['#FFFFFF', '#F3E8FF']}
-                      style={styles.modalGradient}
-                    >
-                      <View style={styles.modalHeader}>
-                        <Ionicons name="mail-outline" size={32} color="#8B5CF6" />
-                        <Text style={styles.modalTitle}>Forgot Password?</Text>
-                      </View>
-                      
-                      <Text style={styles.modalSubtitle}>
-                        Enter your email address and we'll send you an OTP to reset your password.
-                      </Text>
-
-                      <View style={styles.inputContainer}>
-                        <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Enter your email"
-                          placeholderTextColor="#9CA3AF"
-                          value={forgotPasswordEmail}
-                          onChangeText={setForgotPasswordEmail}
-                          style={styles.textInput}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          autoComplete="email"
-                        />
-                      </View>
-
-                      <TouchableOpacity
-                        onPress={handleForgotPasswordSubmit}
-                        disabled={isLoading}
-                        style={[styles.signInButton, isLoading && styles.buttonDisabled]}
-                      >
-                        <LinearGradient
-                          colors={['#8B5CF6', '#EC4899']}
-                          style={styles.buttonGradient}
-                        >
-                          {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                              <ActivityIndicator size="small" color="white" />
-                              <Text style={styles.loadingText}>Sending...</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.buttonText}>Send OTP</Text>
-                          )}
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          setShowForgotPasswordModal(false);
-                          setError('');
-                        }}
-                        style={styles.cancelButton}
-                      >
-                        <Text style={styles.cancelText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  </BlurView>
-                </Animated.View>
-              </View>
-            </Modal>
-
-            {/* OTP Modal */}
-            <Modal
-              visible={showOTPModal}
-              animationType="none"
-              transparent={true}
-              onRequestClose={() => {
-                setShowOTPModal(false);
-                setResendTimer(0);
-                setCanResend(true);
-              }}
-            >
-              <View style={styles.modalOverlay}>
-                <Animated.View style={[styles.otpModal, { transform: [{ scale: modalScale }] }]}>
-                  <BlurView intensity={50} tint="light" style={styles.otpModalInner}>
-                    <LinearGradient
-                      colors={['#FFFFFF', '#F3E8FF']}
-                      style={styles.modalGradient}
-                    >
-                      <Text style={styles.modalTitle}>Reset Password</Text>
-                      <Text style={styles.modalSubtitle}>
-                        Enter the 6-digit OTP sent to {email}
-                      </Text>
-
-                      <View style={styles.inputContainer}>
-                        <Ionicons name="key-outline" size={24} color="#9CA3AF" style={styles.inputIcon} />
-                        <TextInput
-                          placeholder="Enter 6-digit OTP"
-                          placeholderTextColor="#9CA3AF"
-                          value={otp}
-                          onChangeText={(text) => {
-                            const numericText = text.replace(/[^0-9]/g, '');
-                            setOTP(numericText);
-                          }}
-                          style={[styles.textInput, styles.otpInput]}
-                          keyboardType="number-pad"
-                          maxLength={6}
-                          textAlign="center"
-                        />
-                      </View>
-
-                      {otp.length === 6 && (
-                        <View style={styles.inputContainer}>
-                          <Ionicons name="lock-closed-outline" size={24} color="#9CA3AF" style={styles.inputIcon} />
-                          <TextInput
-                            placeholder="Enter new password (min 8 characters)"
-                            placeholderTextColor="#9CA3AF"
-                            value={newPassword}
-                            onChangeText={setNewPassword}
-                            style={[styles.textInput, styles.otpInput]}
-                            secureTextEntry={true}
-                          />
-                        </View>
-                      )}
-
-                      <TouchableOpacity
-                        onPress={handleOTPSubmit}
-                        disabled={isLoading || otp.length !== 6 || !newPassword}
-                        style={[styles.signInButton, (isLoading || otp.length !== 6 || !newPassword) && styles.buttonDisabled]}
-                      >
-                        <LinearGradient
-                          colors={['#8B5CF6', '#EC4899']}
-                          style={styles.buttonGradient}
-                        >
-                          {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                              <ActivityIndicator size="small" color="white" />
-                              <Text style={styles.loadingText}>Verifying...</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.buttonText}>Verify & Update</Text>
-                          )}
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      {resendTimer > 0 ? (
-                        <View style={styles.timerContainer}>
-                          <Ionicons name="time-outline" size={16} color="#8B5CF6" />
-                          <Text style={styles.timerText}>
-                            Resend OTP in {formatTimer(resendTimer)}
-                          </Text>
-                        </View>
-                      ) : (
-                        <TouchableOpacity
-                          onPress={handleResendOTP}
-                          disabled={isLoading}
-                          style={styles.resendButton}
-                        >
-                          <Text style={styles.resendText}>Resend OTP</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          setShowOTPModal(false);
-                          setResendTimer(0);
-                          setCanResend(true);
-                          setOTP('');
-                          setNewPassword('');
-                        }}
-                        style={styles.cancelButton}
-                      >
-                        <Text style={styles.cancelText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  </BlurView>
-                </Animated.View>
-              </View>
-            </Modal>
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
@@ -525,11 +329,180 @@ let interval: number;
             >
               <Text style={styles.createAccountText}>Create Account</Text>
             </TouchableOpacity>
-          </BlurView>
+          </View>
 
           <Text style={styles.tagline}>Take a moment. Breathe. Reflect.</Text>
         </View>
-      </LinearGradient>
+
+        {/* Forgot Password Modal */}
+        <Modal
+          visible={showForgotPasswordModal}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => setShowForgotPasswordModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[styles.forgotPasswordModal, { transform: [{ scale: forgotModalScale }] }]}>
+              <View style={styles.forgotPasswordModalInner}>
+                <View style={styles.modalGradient}>
+                  <View style={styles.modalHeader}>
+                    <Ionicons name="mail-outline" size={32} color="#374151" />
+                    <Text style={styles.modalTitle}>Forgot Password?</Text>
+                  </View>
+                  
+                  <Text style={styles.modalSubtitle}>
+                    Enter your email address and we'll send you an OTP to reset your password.
+                  </Text>
+
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Enter your email"
+                      placeholderTextColor="#6B7280"
+                      value={forgotPasswordEmail}
+                      onChangeText={setForgotPasswordEmail}
+                      style={styles.textInput}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleForgotPasswordSubmit}
+                    disabled={isLoading}
+                    style={[styles.signInButton, isLoading && styles.buttonDisabled]}
+                  >
+                    <View style={styles.buttonGradient}>
+                      {isLoading ? (
+                        <View style={styles.loadingContainer}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <Text style={styles.loadingText}>Sending...</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.buttonText}>Send OTP</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowForgotPasswordModal(false);
+                      setError('');
+                    }}
+                    style={styles.cancelButton}
+                  >
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+
+        {/* OTP Modal */}
+        <Modal
+          visible={showOTPModal}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => {
+            setShowOTPModal(false);
+            setResendTimer(0);
+            setCanResend(true);
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[styles.otpModal, { transform: [{ scale: modalScale }] }]}>
+              <View style={styles.otpModalInner}>
+                <View style={styles.modalGradient}>
+                  <Text style={styles.modalTitle}>Reset Password</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Enter the 6-digit OTP sent to {email}
+                  </Text>
+
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="key-outline" size={24} color="#6B7280" style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Enter 6-digit OTP"
+                      placeholderTextColor="#6B7280"
+                      value={otp}
+                      onChangeText={(text) => {
+                        const numericText = text.replace(/[^0-9]/g, '');
+                        setOTP(numericText);
+                      }}
+                      style={[styles.textInput, styles.otpInput]}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      textAlign="center"
+                    />
+                  </View>
+
+                  {otp.length === 6 && (
+                    <View style={styles.inputContainer}>
+                      <Ionicons name="lock-closed-outline" size={24} color="#6B7280" style={styles.inputIcon} />
+                      <TextInput
+                        placeholder="Enter new password (min 8 characters)"
+                        placeholderTextColor="#6B7280"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        style={[styles.textInput, styles.otpInput]}
+                        secureTextEntry={true}
+                      />
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={handleOTPSubmit}
+                    disabled={isLoading || otp.length !== 6 || !newPassword}
+                    style={[styles.signInButton, (isLoading || otp.length !== 6 || !newPassword) && styles.buttonDisabled]}
+                  >
+                    <View style={styles.buttonGradient}>
+                      {isLoading ? (
+                        <View style={styles.loadingContainer}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <Text style={styles.loadingText}>Verifying...</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.buttonText}>Verify & Update</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {resendTimer > 0 ? (
+                    <View style={styles.timerContainer}>
+                      <Ionicons name="time-outline" size={16} color="#374151" />
+                      <Text style={styles.timerText}>
+                        Resend OTP in {formatTimer(resendTimer)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={handleResendOTP}
+                      disabled={isLoading}
+                      style={styles.resendButton}
+                    >
+                      <Text style={styles.resendText}>Resend OTP</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOTPModal(false);
+                      setResendTimer(0);
+                      setCanResend(true);
+                      setOTP('');
+                      setNewPassword('');
+                    }}
+                    style={styles.cancelButton}
+                  >
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -537,15 +510,17 @@ let interval: number;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF', // Pure white background
   },
   backgroundGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF', // Pure white background
   },
   floatingCircle: {
     position: 'absolute',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0)', // Transparent to remove decorative circles
     borderRadius: 1000,
   },
   circle1: {
@@ -559,14 +534,12 @@ const styles = StyleSheet.create({
     height: 150,
     bottom: 150,
     right: -30,
-    backgroundColor: 'rgba(236, 72, 153, 0.1)',
   },
   circle3: {
     width: 100,
     height: 100,
     top: '50%',
     left: 20,
-    backgroundColor: 'rgba(251, 146, 60, 0.1)',
   },
   contentContainer: {
     width: width * 0.9,
@@ -575,17 +548,17 @@ const styles = StyleSheet.create({
   },
   glassCard: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#FFFFFF', // Pure white background
     borderRadius: 24,
     padding: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#D1D5DB', // Standard border color
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -597,42 +570,43 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
+    backgroundColor: '#374151', // Primary color
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#8B5CF6',
+    shadowColor: '#374151',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
   },
   welcomeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#8B5CF6',
+    color: '#374151', // Primary text color
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#6B7280', // Secondary text color
     textAlign: 'center',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'transparent', // Transparent for simplicity
+    borderColor: '#DC2626', // Error color
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#DC2626', // Error color
     fontSize: 14,
     marginLeft: 8,
     flex: 1,
@@ -644,13 +618,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: '#FFFFFF', // Pure white background
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: '#D1D5DB', // Standard border color
     paddingHorizontal: 16,
     paddingVertical: 4,
-    marginBottom: 16,
+    marginBottom: 8,
     minHeight: 56,
   },
   inputIcon: {
@@ -659,7 +633,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: '#374151',
+    color: '#374151', // Primary text color
     paddingVertical: 12,
   },
   passwordInput: {
@@ -675,12 +649,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#8B5CF6',
+    shadowColor: '#374151',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
   },
@@ -688,13 +662,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonGradient: {
+    backgroundColor: '#374151', // Primary color
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
   },
   buttonText: {
-    color: 'white',
+    color: '#FFFFFF', // White for contrast
     fontSize: 18,
     fontWeight: '600',
   },
@@ -703,7 +678,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: 'white',
+    color: '#FFFFFF', // White for contrast
     fontSize: 16,
     marginLeft: 8,
     fontWeight: '500',
@@ -714,7 +689,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   forgotText: {
-    color: '#8B5CF6',
+    color: '#374151', // Primary color
     fontSize: 14,
     fontWeight: '500',
   },
@@ -726,10 +701,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(156, 163, 175, 0.3)',
+    backgroundColor: '#D1D5DB', // Standard border color
   },
   dividerTextContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#FFFFFF', // Pure white background
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
@@ -737,15 +712,15 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 10,
-    color: '#6B7280',
+    color: '#6B7280', // Secondary text color
     fontWeight: '500',
     letterSpacing: 0.5,
   },
   createAccountButton: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#FFFFFF', // Pure white background
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: '#D1D5DB', // Standard border color
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -753,13 +728,13 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   createAccountText: {
-    color: '#374151',
+    color: '#374151', // Primary text color
     fontSize: 16,
     fontWeight: '500',
   },
   tagline: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#6B7280', // Secondary text color
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 32,
@@ -773,7 +748,7 @@ const styles = StyleSheet.create({
   forgotPasswordModal: {
     width: width * 0.85,
     maxWidth: 400,
-    borderRadius: 28,
+    borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -784,10 +759,11 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   forgotPasswordModalInner: {
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderWidth: 1,
+    borderColor: '#D1D5DB', // Standard border color
+    backgroundColor: '#FFFFFF', // Pure white background
   },
   modalHeader: {
     alignItems: 'center',
@@ -796,7 +772,7 @@ const styles = StyleSheet.create({
   otpModal: {
     width: width * 0.85,
     maxWidth: 400,
-    borderRadius: 28,
+    borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -807,25 +783,27 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   otpModalInner: {
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderWidth: 1,
+    borderColor: '#D1D5DB', // Standard border color
+    backgroundColor: '#FFFFFF', // Pure white background
   },
   modalGradient: {
     padding: 32,
+    backgroundColor: '#FFFFFF', // Pure white background
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8B5CF6',
+    color: '#374151', // Primary text color
     marginTop: 12,
     marginBottom: 16,
     textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#6B7280', // Secondary text color
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 22,
@@ -834,14 +812,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    backgroundColor: 'transparent', // Transparent for simplicity
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
   },
   timerText: {
     fontSize: 14,
-    color: '#8B5CF6',
+    color: '#374151', // Primary color
     fontWeight: '500',
     marginLeft: 8,
   },
@@ -855,7 +833,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   cancelText: {
-    color: '#EF4444',
+    color: '#DC2626', // Error color
     fontSize: 16,
     fontWeight: '600',
   },
@@ -865,7 +843,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   resendText: {
-    color: '#8B5CF6',
+    color: '#374151', // Primary color
     fontSize: 14,
     fontWeight: '500',
   },
