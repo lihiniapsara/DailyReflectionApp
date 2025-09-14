@@ -4,14 +4,16 @@ import { Tabs } from "expo-router"
 import { MaterialIcons } from "@expo/vector-icons"
 
 const tabs = [
-  { label: "Home", name: "home", icon: "home-filled" }
+  { label: "Home", name: "home", icon: "home-filled" },
+  { label: "Settings", name: "settings", icon: "settings" },
+
 ] as const
 
 const DashboardLayout = () => {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#007AFF",
+        tabBarActiveTintColor: "#d109f5ff",
         tabBarInactiveTintColor: "#999",
         headerShown: false,
         tabBarStyle: {

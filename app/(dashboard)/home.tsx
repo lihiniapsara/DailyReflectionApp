@@ -1,87 +1,167 @@
 import React from 'react';
-import { Heart, TrendingUp, BookOpen, ArrowRight } from 'lucide-react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Settings, Edit, ChevronRight } from 'react-native-feather';
+import { Mood } from '../../types/Mood';
 
-interface WelcomeToReflectionAppProps {
-  onStartReflecting?: () => void;
+interface HomeScreenProps {
+  setCurrentScreen?: (screen: string) => void;
+  moods: Mood[]; // Removed default value from interface
 }
 
-const Home: React.FC<WelcomeToReflectionAppProps> = ({ onStartReflecting }) => {
-  
-  const handleStartReflecting = () => {
-    onStartReflecting?.();
-  };
-
-  const features = [
-    {
-      icon: <Heart className="w-6 h-6" />,
-      title: "Capture your thoughts",
-      description: "Write down your daily reflections and feelings"
-    },
-    {
-      icon: <TrendingUp className="w-6 h-6" />,
-      title: "Track your mood",
-      description: "Monitor your emotional well-being over time"
-    },
-    {
-      icon: <BookOpen className="w-6 h-6" />,
-      title: "Discover insights",
-      description: "Learn patterns about your daily life and growth"
-    }
-  ];
-
+const HomeScreen: React.FC<HomeScreenProps> = ({ setCurrentScreen, moods = [] }) => { // Default value here
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-500 to-teal-600 flex flex-col">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 text-center text-white">
-        {/* App Icon/Logo */}
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-4">
-            <Heart className="w-10 h-10 text-white" />
-          </div>
-          <div className="w-16 h-1 bg-white bg-opacity-30 rounded-full mx-auto"></div>
-        </div>
-
-        {/* Title and Subtitle */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-3">Welcome to Reflection App</h1>
-          <h2 className="text-xl font-semibold text-teal-100 mb-4">Your Personal Reflection Space</h2>
-          <p className="text-teal-100 text-lg leading-relaxed max-w-sm mx-auto">
-            Capture your thoughts, track your mood, and discover insights about your daily life
-          </p>
-        </div>
-
-        {/* Features */}
-        <div className="mb-12 space-y-4 w-full max-w-sm">
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-center space-x-3 text-left">
-              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
-                {feature.icon}
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">{feature.title}</h3>
-                <p className="text-sm text-teal-100">{feature.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom Section */}
-      <div className="p-6">
-        <button
-          onClick={handleStartReflecting}
-          className="w-full bg-white text-teal-600 py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center space-x-2"
-        >
-          <span>Start Reflecting</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
-        
-        <p className="text-center text-teal-100 text-sm mt-4">
-          Begin your journey to better self-awareness
-        </p>
-      </div>
-    </div>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Today</Text>
+        <TouchableOpacity onPress={() => setCurrentScreen?.('settings')}>
+          <Settings size={20} color="#4B5563" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>How are you feeling today?</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodContainer}>
+            {moods.map((mood) => (
+              <TouchableOpacity
+                key={mood.value}
+                style={styles.moodButton}
+                onPress={() => setCurrentScreen?.('mood')}
+              >
+                <Text style={styles.moodButtonText}>{mood.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Daily Reflection</Text>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => setCurrentScreen?.('journal-entry')}
+          >
+            <View style={styles.iconContainer}>
+              <Edit size={14} color="#7C3AED" />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>Journal Entry</Text>
+              <Text style={styles.cardSubtitle}>Tap to start writing</Text>
+            </View>
+            <ChevronRight size={14} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Daily Prompt</Text>
+          <View style={styles.card}>
+            <Text style={styles.promptText}>
+              "What is one thing you're grateful for today?"
+            </Text>
+            <TouchableOpacity
+              style={styles.promptButton}
+              onPress={() => setCurrentScreen?.('journal-entry')}
+            >
+              <Text style={styles.promptButtonText}>Write about it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
-export default Home;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  moodContainer: {
+    flexDirection: 'row',
+    paddingBottom: 8,
+  },
+  moodButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 9999,
+    marginRight: 8,
+  },
+  moodButtonText: {
+    fontSize: 12,
+    color: '#1F2937',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#EDE9FE',
+    borderRadius: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  promptText: {
+    fontSize: 16,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  promptButton: {
+    backgroundColor: '#7C3AED',
+    paddingVertical: 12,
+    borderRadius: 9999,
+    alignItems: 'center',
+  },
+  promptButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+});
+
+export default HomeScreen;
