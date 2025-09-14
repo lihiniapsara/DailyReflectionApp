@@ -107,7 +107,7 @@ export default function SignIn() {
       }
 
       await login(email, password);
-      router.push('/');
+      router.push('/home'); // Changed from '/' to '/(dashboard)/onboard'
     } catch (err) {
       const error = err as Error;
       setError(error.message || 'Sign in failed');

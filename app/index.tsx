@@ -6,10 +6,11 @@ import { useAuth } from "../context/AuthContext"
 const Index = () => {
   const router = useRouter()
   const { user, loading } = useAuth()
+  console.log("User data :", user)
 
   useEffect(() => {
     if (!loading) {
-      if (user) router.replace("/home")
+      if (user) router.replace("/")
       else router.replace("/login")
     }
   }, [user, loading])
