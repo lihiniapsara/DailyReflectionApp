@@ -5,6 +5,7 @@ import { MaterialIcons } from "@expo/vector-icons"
 
 const tabs = [
   { label: "Home", name: "home", icon: "home-filled" },
+  { label: "Journal", name: "journal", icon: "menu-book" },
   { label: "Settings", name: "settings", icon: "settings" },
 
 ] as const
