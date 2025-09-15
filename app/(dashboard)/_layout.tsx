@@ -7,6 +7,7 @@ const tabs = [
   { label: "Home", name: "home", icon: "home-filled" },
   { label: "Journal", name: "journal", icon: "menu-book" },
   { label: "Mood", name: "mood", icon: "mood" },
+  { label: "Insights", name: "insights", icon: "insights" },
   { label: "Settings", name: "settings", icon: "settings" }
 
 
