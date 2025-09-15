@@ -8,8 +8,7 @@ const tabs = [
   { label: "Journal", name: "journal", icon: "menu-book" },
   { label: "Mood", name: "mood", icon: "mood" },
   { label: "Insights", name: "insights", icon: "insights" },
-  { label: "Settings", name: "settings", icon: "settings" }
-
+  { label: "Settings", name: "settings", icon: "settings" },
 
 ] as const
 

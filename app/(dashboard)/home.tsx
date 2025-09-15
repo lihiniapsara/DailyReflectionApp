@@ -55,10 +55,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setCurrentScreen, moods = [] })
               "What is one thing you're grateful for today?"
             </Text>
             <TouchableOpacity
-              style={styles.promptButton}
+            
               onPress={() => setCurrentScreen?.('journal-entry')}
             >
-              <Text style={styles.promptButtonText}>Write about it</Text>
+              <Text className='text-black bg-purple-500/30 rounded-md p-2'>Write about it</Text>
             </TouchableOpacity>
           </View>
         </View>

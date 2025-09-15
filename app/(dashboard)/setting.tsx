@@ -1,195 +1,150 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Search, Bell, Cloud, ChevronRight, Info, Lock, Shield, FileText, HelpCircle, MessageCircle } from 'react-native-feather';
-import { useRouter } from 'expo-router'; // Added for navigation
+import React, { memo, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, Stack } from 'expo-router';
 
-const SettingsScreen = () => {
+// Type definitions for options
+interface SettingOption {
+  id: string;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
+  toggle?: boolean;
+  extraText?: string;
+}
+
+interface Section {
+  title: string;
+  options: SettingOption[];
+}
+
+// Sample data for settings
+const sections: Section[] = [
+  {
+    title: 'Appearance',
+    options: [
+      { id: 'theme', title: 'Theme', icon: 'moon', route: '/theme' },
+    ],
+  },
+  {
+    title: 'Notifications',
+    options: [
+      { id: 'reminders', title: 'Reminders', icon: 'notifications', route: '/reminders', toggle: true },
+      { id: 'reminder-time', title: 'Reminder Time', icon: 'time', route: '/reminder-time', extraText: '9:00 PM' },
+    ],
+  },
+  {
+    title: 'Data & Security',
+    options: [
+      { id: 'data-backup', title: 'Data Backup', icon: 'cloud', route: '/data-backup' },
+      { id: 'passcode-lock', title: 'Passcode Lock', icon: 'lock-closed', route: '/passcode-lock', toggle: false },
+      { id: 'biometrics', title: 'Use Biometrics', icon: 'finger-print', route: '/biometrics', toggle: false },
+    ],
+  },
+  {
+    title: 'Help & Support',
+    options: [
+      { id: 'faqs', title: 'FAQs', icon: 'help-circle', route: '/faqs' },
+      { id: 'contact-support', title: 'Contact Support', icon: 'chatbubble', route: '/contact-support' },
+    ],
+  },
+  {
+    title: 'About Us',
+    options: [
+      { id: 'app-version', title: 'App Version', icon: 'information-circle', route: '/app-version', extraText: '1.2.3' },
+      { id: 'terms-of-service', title: 'Terms of Service', icon: 'document-text', route: '/terms-of-service' },
+      { id: 'privacy-policy', title: 'Privacy Policy', icon: 'shield', route: '/privacy-policy' },
+    ],
+  },
+];
+
+// Option component
+const SettingOption = memo(
+  ({ option, onPress }: { option: SettingOption; onPress: (route: string) => void }) => {
+    const [isToggled, setIsToggled] = useState(option.toggle || false);
+
+    return (
+      <TouchableOpacity
+        style={styles.option}
+        onPress={() => onPress(option.route)}
+        accessibilityLabel={option.title}
+        accessibilityRole="button"
+      >
+        <View style={styles.optionContent}>
+          <Ionicons name={option.icon} size={16} color="#4B5563" />
+          <Text style={styles.optionText}>{option.title}</Text>
+        </View>
+        <View style={styles.chevron}>
+          {option.extraText && <Text style={styles.timeText}>{option.extraText}</Text>}
+          {option.toggle !== undefined ? (
+            <TouchableOpacity
+              style={isToggled ? styles.toggleOn : styles.toggleOff}
+              onPress={() => setIsToggled(!isToggled)}
+              accessibilityLabel={`${option.title} toggle`}
+            >
+              <View style={styles.toggleDot} />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+);
+
+const SettingsScreen: React.FC = () => {
   const router = useRouter();
 
-  // Function to handle navigation or actions
   const handleOptionPress = (route: string) => {
-    router.push(route); // Navigate to the specified route
+    router.push(route);
   };
+
+  const renderSection = ({ item }: { item: Section }) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{item.title}</Text>
+      <View style={styles.card}>
+        <FlatList
+          data={item.options}
+          keyExtractor={(option) => option.id}
+          renderItem={({ item: option }) => (
+            <SettingOption option={option} onPress={handleOptionPress} />
+          )}
+          scrollEnabled={false}
+        />
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ title: 'Settings' }} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
-      
       <View style={styles.searchContainer}>
-        <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
+        <Ionicons name="search" size={16} color="#9CA3AF" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search settings"
           placeholderTextColor="#9CA3AF"
+          accessibilityLabel="Search settings input"
         />
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Appearance</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/theme')}
-          >
-            <View style={styles.optionContent}>
-              <View style={styles.iconPlaceholder}>
-                <Text style={styles.iconText}>🌙</Text> {/* Placeholder for Theme icon */}
-              </View>
-              <Text style={styles.optionText}>Theme</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/reminders')}
-          >
-            <View style={styles.optionContent}>
-              <Bell size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Reminders</Text>
-            </View>
-            <View style={styles.toggleOn}>
-              <View style={styles.toggleDot} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/reminder-time')}
-          >
-            <View style={styles.optionContent}>
-              <View style={styles.iconPlaceholder}>
-                <Text style={styles.iconText}>⏰</Text> {/* Placeholder for Clock icon */}
-              </View>
-              <Text style={styles.optionText}>Reminder Time</Text>
-            </View>
-            <View style={styles.chevron}>
-              <Text style={styles.timeText}>9:00 PM</Text>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Data & Security</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/data-backup')}
-          >
-            <View style={styles.optionContent}>
-              <Cloud size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Data Backup</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/passcode-lock')}
-          >
-            <View style={styles.optionContent}>
-              <Lock size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Passcode Lock</Text>
-            </View>
-            <View style={styles.toggleOff}>
-              <View style={styles.toggleDot} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/biometrics')}
-          >
-            <View style={styles.optionContent}>
-              <Shield size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Use Biometrics</Text>
-            </View>
-            <View style={styles.toggleOff}>
-              <View style={styles.toggleDot} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Help & Support</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/faqs')}
-          >
-            <View style={styles.optionContent}>
-              <HelpCircle size={16} color="#4B5563" />
-              <Text style={styles.optionText}>FAQs</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/contact-support')}
-          >
-            <View style={styles.optionContent}>
-              <MessageCircle size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Contact Support</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About Us</Text>
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/app-version')}
-          >
-            <View style={styles.optionContent}>
-              <Info size={16} color="#4B5563" />
-              <Text style={styles.optionText}>App Version</Text>
-            </View>
-            <Text style={styles.versionText}>1.2.3</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/terms-of-service')}
-          >
-            <View style={styles.optionContent}>
-              <FileText size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Terms of Service</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.option}
-            onPress={() => handleOptionPress('/privacy-policy')}
-          >
-            <View style={styles.optionContent}>
-              <Shield size={16} color="#4B5563" />
-              <Text style={styles.optionText}>Privacy Policy</Text>
-            </View>
-            <View style={styles.chevron}>
-              <ChevronRight size={14} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <FlatList
+        data={sections}
+        keyExtractor={(section) => section.title}
+        renderItem={renderSection}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 64 }}
+      />
     </View>
   );
 };
@@ -198,7 +153,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-    paddingBottom: 64, // Adjusted for tab bar
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -292,22 +246,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginRight: 8,
-  },
-  versionText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  iconPlaceholder: {
-    width: 16,
-    height: 16,
-    borderRadius: 9999,
-    backgroundColor: '#D1D5DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 12,
-    color: '#4B5563',
   },
 });
 
