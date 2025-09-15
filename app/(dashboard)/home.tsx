@@ -1,167 +1,157 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { Settings, Edit, ChevronRight } from 'react-native-feather';
-import { Mood } from '../../types/Mood';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, Stack } from 'expo-router';
+import { JournalEntry } from '@/types/JournalEntry';
 
-interface HomeScreenProps {
-  setCurrentScreen?: (screen: string) => void;
-  moods: Mood[]; // Removed default value from interface
-}
+// Sample data
+const moodOptions: { label: string; value: number; emoji: string; color: string }[] = [
+  { label: 'Amazing', value: 5, emoji: '😊', color: 'bg-green-500' },
+  { label: 'Good', value: 4, emoji: '🙂', color: 'bg-blue-500' },
+  { label: 'Okay', value: 3, emoji: '😐', color: 'bg-yellow-500' },
+  { label: 'Not Great', value: 2, emoji: '😞', color: 'bg-orange-500' },
+  { label: 'Awful', value: 1, emoji: '😢', color: 'bg-red-500' },
+];
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setCurrentScreen, moods = [] }) => { // Default value here
+const sampleEntries: JournalEntry[] = [
+  { id: 1, title: 'Grateful Day', content: 'Today I fe  lt amazing because I spent time with family.', date: '2025-09-15', mood: 'Amazing' },
+  { id: 2, title: 'Reflective Evening', content: 'Had a tough day but learned a lot.', date: '2025-09-14', mood: 'Not Great' },
+];
+
+// Journal entry item component
+const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
+  const router = useRouter();
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Today</Text>
-        <TouchableOpacity onPress={() => setCurrentScreen?.('settings')}>
-          <Settings size={20} color="#4B5563" />
+    <TouchableOpacity
+      className="flex-row items-center justify-between p-3 bg-white border border-gray-200 rounded-xl mb-2"
+      onPress={() => router.push(`/journal/${entry.id}`)}
+      accessibilityLabel={`View journal entry: ${entry.title}`}
+      accessibilityRole="button"
+    >
+      <View className="flex-1">
+        <Text className="text-sm font-medium text-gray-900">{entry.title}</Text>
+        <Text className="text-xs text-gray-500">{entry.date} • {entry.mood}</Text>
+        <Text className="text-xs text-gray-600 line-clamp-2">{entry.content}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+    </TouchableOpacity>
+  );
+};
+
+const HomeScreen: React.FC = () => {
+  const router = useRouter();
+  const [selectedMood, setSelectedMood] = useState<number | null>(null);
+
+  return (
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <Stack.Screen options={{ title: 'Daily Reflection' }} />
+      {/* Header */}
+      <View className="flex-row items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
+        <View>
+          <Text className="text-xl font-semibold text-gray-900">Daily Reflection Dashboard</Text>
+          <Text className="text-sm text-gray-500">Today, {new Date().toLocaleDateString()}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/settings')}
+          accessibilityLabel="Settings"
+          accessibilityRole="button"
+        >
+          <Ionicons name="settings" size={20} color="#4B5563" />
         </TouchableOpacity>
       </View>
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How are you feeling today?</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodContainer}>
-            {moods.map((mood) => (
+
+      {/* Main Content */}
+      <ScrollView className="p-4" contentContainerStyle={{ paddingBottom: 64 }}>
+        {/* Mood Selection (Changed Design) */}
+        <View className="space-y-4">
+          <Text className="text-xl font-bold text-gray-900">How are you feeling today?</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row space-x-3">
+            {moodOptions.map((mood) => (
               <TouchableOpacity
                 key={mood.value}
-                style={styles.moodButton}
-                onPress={() => setCurrentScreen?.('mood')}
+                className={`flex-col items-center justify-center w-24 h-28 rounded-2xl p-3 shadow-md ${
+                  selectedMood === mood.value
+                    ? `${mood.color.replace('bg-', 'bg-gradient-to-r from-')} via-${mood.color.replace('bg-', '')}/80 to-${mood.color.replace('bg-', '')}/60 text-white`
+                    : 'bg-white border border-gray-200'
+                }`}
+                onPress={() => {
+                  setSelectedMood(mood.value);
+                  router.push(`/mood?mood=${mood.label}`);
+                }}
+                accessibilityLabel={`Select ${mood.label} mood`}
+                accessibilityRole="button"
               >
-                <Text style={styles.moodButtonText}>{mood.label}</Text>
+                <Text className="text-4xl mb-2">{mood.emoji}</Text>
+                <Text
+                  className={`text-sm font-semibold ${
+                    selectedMood === mood.value ? 'text-white' : 'text-gray-800'
+                  }`}
+                >
+                  {mood.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Reflection</Text>
+
+        {/* Daily Reflection */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">Daily Reflection</Text>
           <TouchableOpacity
-            style={styles.card}
-            onPress={() => setCurrentScreen?.('journal-entry')}
+            className="flex-row items-center p-3 bg-white border border-gray-200 rounded-xl"
+            onPress={() => router.push('/journal-entry')}
+            accessibilityLabel="Journal Entry"
+            accessibilityRole="button"
           >
-            <View style={styles.iconContainer}>
-              <Edit size={14} color="#7C3AED" />
+            <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center mr-3">
+              <Ionicons name="book" size={16} color="#7C3AED" />
             </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Journal Entry</Text>
-              <Text style={styles.cardSubtitle}>Tap to start writing</Text>
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-gray-900">Journal Entry</Text>
+              <Text className="text-xs text-gray-500">Tap to start writing</Text>
             </View>
-            <ChevronRight size={14} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Prompt</Text>
-          <View style={styles.card}>
-            <Text style={styles.promptText}>
+
+        {/* Daily Prompt */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">Daily Prompt</Text>
+          <View className="p-3 bg-white border border-gray-200 rounded-xl">
+            <Text className="text-sm text-gray-600 italic mb-3">
               "What is one thing you're grateful for today?"
             </Text>
             <TouchableOpacity
-            
-              onPress={() => setCurrentScreen?.('journal-entry')}
+              className="w-full bg-purple-600 py-3 rounded-full"
+              onPress={() => router.push('/journal-entry')}
+              accessibilityLabel="Write about daily prompt"
+              accessibilityRole="button"
             >
-              <Text className='text-black bg-purple-500/30 rounded-md p-2'>Write about it</Text>
+              <Text className="text-sm font-medium text-white text-center">Write about it</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Recent Journal Entries */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">Recent Entries</Text>
+          {sampleEntries.slice(0, 3).map((entry) => (
+            <JournalEntryItem key={entry.id} entry={entry} />
+          ))}
+          {sampleEntries.length > 3 && (
+            <TouchableOpacity
+              className="w-full py-2"
+              onPress={() => router.push('/journal')}
+              accessibilityLabel="View all journal entries"
+              accessibilityRole="button"
+            >
+              <Text className="text-sm font-medium text-purple-600 text-center">View All Entries</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  moodContainer: {
-    flexDirection: 'row',
-    paddingBottom: 8,
-  },
-  moodButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 9999,
-    marginRight: 8,
-  },
-  moodButtonText: {
-    fontSize: 12,
-    color: '#1F2937',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#EDE9FE',
-    borderRadius: 9999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  promptText: {
-    fontSize: 16,
-    color: '#4B5563',
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  promptButton: {
-    backgroundColor: '#7C3AED',
-    paddingVertical: 12,
-    borderRadius: 9999,
-    alignItems: 'center',
-  },
-  promptButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-});
 
 export default HomeScreen;
