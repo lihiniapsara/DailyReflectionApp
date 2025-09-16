@@ -6,6 +6,7 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
@@ -18,38 +19,38 @@ const { width } = Dimensions.get('window');
 
 // Mood options
 const moodOptions: { label: string; value: number; emoji: string; color: string }[] = [
-  { label: 'Amazing', value: 5, emoji: '😊', color: 'bg-green-500' },
-  { label: 'Good', value: 4, emoji: '🙂', color: 'bg-blue-500' },
-  { label: 'Okay', value: 3, emoji: '😐', color: 'bg-yellow-500' },
-  { label: 'Not Great', value: 2, emoji: '😞', color: 'bg-orange-500' },
-  { label: 'Awful', value: 1, emoji: '😢', color: 'bg-red-500' },
+  { label: 'Amazing', value: 5, emoji: '😊', color: '#22c55e' },
+  { label: 'Good', value: 4, emoji: '🙂', color: '#3b82f6' },
+  { label: 'Okay', value: 3, emoji: '😐', color: '#eab308' },
+  { label: 'Not Great', value: 2, emoji: '😞', color: '#f97316' },
+  { label: 'Awful', value: 1, emoji: '😢', color: '#ef4444' },
 ];
 
-// Calculate mood item width based on screen size - more mobile friendly
-const moodItemWidth = width < 400 ? (width - 48) / 3.5 : (width - 64) / 4.5;
+// Calculate mood item width based on screen size
+const moodItemWidth = (width - 32) / 3.5; // Adjusted for better mobile fit
 
 // Journal item component
 const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   const router = useRouter();
   return (
     <TouchableOpacity
-      className="flex-row items-center justify-between p-4 bg-white border border-gray-200 rounded-lg mb-3"
+      style={styles.journalItem}
       onPress={() => router.push(`/journal/${entry.id}`)}
       accessibilityLabel={`View journal entry: ${entry.title}`}
       accessibilityRole="button"
     >
-      <View className="flex-1 mr-3">
-        <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
+      <View style={styles.journalItemContent}>
+        <Text style={styles.journalItemTitle} numberOfLines={1}>
           {entry.title}
         </Text>
-        <Text className="text-xs text-gray-500 mt-1">
+        <Text style={styles.journalItemDate}>
           {entry.date} • {entry.mood}
         </Text>
-        <Text className="text-sm text-gray-600 mt-1" numberOfLines={2}>
+        <Text style={styles.journalItemPreview} numberOfLines={2}>
           {entry.content}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+      <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
     </TouchableOpacity>
   );
 };
@@ -78,16 +79,16 @@ const HomeScreen: React.FC = () => {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: 'Daily Reflection' }} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between bg-white px-4 py-3 border-b border-gray-200">
-        <View className="flex-1 mr-3">
-          <Text className="text-lg font-bold text-gray-900" numberOfLines={1}>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
             Daily Reflection
           </Text>
-          <Text className="text-xs text-gray-500 mt-1">
+          <Text style={styles.headerDate}>
             Today, {new Date().toLocaleDateString()}
           </Text>
         </View>
@@ -95,146 +96,353 @@ const HomeScreen: React.FC = () => {
           onPress={() => router.push('/settings')}
           accessibilityLabel="Settings"
           accessibilityRole="button"
-          className="p-2"
+          style={styles.settingsButton}
         >
           <Ionicons name="settings-outline" size={22} color="#4B5563" />
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
-      <ScrollView 
-        className="flex-1"
-        contentContainerStyle={{ padding: 16 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Mood Selection */}
-        <View className="mb-6">
-          <Text className="text-lg font-bold text-gray-900 mb-3">
-            How are you feeling today?
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-2"
-            contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 8 }}
-          >
-            {moodOptions.map((mood) => (
-              <TouchableOpacity
-                key={mood.value}
-                style={{ width: moodItemWidth, marginHorizontal: 6 }}
-                className={`flex-col items-center justify-center h-28 rounded-xl p-3
-                  ${selectedMood === mood.value
-                    ? `${mood.color}`
-                    : 'bg-white border border-gray-200'
-                  }`}
-                onPress={() => {
-                  setSelectedMood(mood.value);
-                  router.push(`/mood?mood=${mood.label}`);
-                }}
-                accessibilityLabel={`Select ${mood.label} mood`}
-                accessibilityRole="button"
-              >
-                <Text className="text-3xl mb-1">{mood.emoji}</Text>
-                <Text
-                  className={`text-xs font-semibold text-center
-                    ${selectedMood === mood.value ? 'text-white' : 'text-gray-800'}`}
-                  numberOfLines={1}
-                >
-                  {mood.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Daily Reflection */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
-            Daily Reflection
-          </Text>
-          <TouchableOpacity
-            className="flex-row items-center p-4 bg-white border border-gray-200 rounded-lg"
-            onPress={() => router.push('/journal')}
-            accessibilityLabel="Journal"
-            accessibilityRole="button"
-          >
-            <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-3">
-              <Ionicons name="book-outline" size={20} color="#7C3AED" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-medium text-gray-900">
-                Journal Entry
-              </Text>
-              <Text className="text-sm text-gray-500">Tap to start writing</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Daily Prompt */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
-            Daily Prompt
-          </Text>
-          <View className="p-4 bg-white border border-gray-200 rounded-lg">
-            <Text className="text-base text-gray-700 italic mb-4">
-              "What is one thing you're grateful for today?"
+      <View style={styles.mainContent}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Mood Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              How are you feeling today?
             </Text>
-            <TouchableOpacity
-              className="w-full bg-purple-600 py-3 rounded-lg"
-              onPress={() => router.push('/journal')}
-              accessibilityLabel="Write about daily prompt"
-              accessibilityRole="button"
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.moodScroll}
+              contentContainerStyle={styles.moodScrollContent}
             >
-              <Text className="text-base font-medium text-white text-center">
-                Write about it
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Recent Journal Entries */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
-            Recent Entries
-          </Text>
-          {journal.length > 0 ? (
-            <>
-              {journal.slice(0, 3).map((entry) => (
-                <JournalEntryItem key={entry.id} entry={entry} />
-              ))}
-              {journal.length > 3 && (
+              {moodOptions.map((mood) => (
                 <TouchableOpacity
-                  className="w-full py-3 mt-2"
-                  onPress={() => router.push('/journal')}
-                  accessibilityLabel="View all journal entries"
+                  key={mood.value}
+                  style={[
+                    styles.moodItem,
+                    { width: moodItemWidth },
+                    selectedMood === mood.value
+                      ? { backgroundColor: mood.color }
+                      : styles.moodItemInactive
+                  ]}
+                  onPress={() => {
+                    setSelectedMood(mood.value);
+                    router.push(`/mood?mood=${mood.label}`);
+                  }}
+                  accessibilityLabel={`Select ${mood.label} mood`}
                   accessibilityRole="button"
                 >
-                  <Text className="text-base font-medium text-purple-600 text-center">
-                    View All Entries ({journal.length})
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.moodLabel,
+                      selectedMood === mood.value && styles.moodLabelSelected
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {mood.label}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            <View className="p-4 bg-white border border-gray-200 rounded-lg">
-              <Text className="text-base text-gray-500 text-center mb-4">
-                No journal entries yet. Start by writing your first entry!
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Daily Reflection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Daily Reflection
+            </Text>
+            <TouchableOpacity
+              style={styles.reflectionCard}
+              onPress={() => router.push('/journal')}
+              accessibilityLabel="Journal"
+              accessibilityRole="button"
+            >
+              <View style={styles.reflectionIcon}>
+                <Ionicons name="book-outline" size={20} color="#7C3AED" />
+              </View>
+              <View style={styles.reflectionContent}>
+                <Text style={styles.reflectionTitle}>
+                  Journal Entry
+                </Text>
+                <Text style={styles.reflectionSubtitle}>Tap to start writing</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Daily Prompt */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Daily Prompt
+            </Text>
+            <View style={styles.promptCard}>
+              <Text style={styles.promptText}>
+                "What is one thing you're grateful for today?"
               </Text>
               <TouchableOpacity
-                className="w-full bg-purple-600 py-3 rounded-lg"
+                style={styles.promptButton}
                 onPress={() => router.push('/journal')}
+                accessibilityLabel="Write about daily prompt"
+                accessibilityRole="button"
               >
-                <Text className="text-base font-medium text-white text-center">
-                  Start Journaling
+                <Text style={styles.promptButtonText}>
+                  Write about it
                 </Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </ScrollView>
+          </View>
+
+          {/* Recent Journal Entries */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Recent Entries
+            </Text>
+            {journal.length > 0 ? (
+              <>
+                {journal.slice(0, 3).map((entry) => (
+                  <JournalEntryItem key={entry.id} entry={entry} />
+                ))}
+                {journal.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.viewAllButton}
+                    onPress={() => router.push('/journal')}
+                    accessibilityLabel="View all journal entries"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.viewAllText}>
+                      View All Entries ({journal.length})
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  No journal entries yet. Start by writing your first entry!
+                </Text>
+                <TouchableOpacity
+                  style={styles.startJournalingButton}
+                  onPress={() => router.push('/journal')}
+                >
+                  <Text style={styles.startJournalingText}>
+                    Start Journaling
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerDate: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  settingsButton: {
+    padding: 4,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  moodScroll: {
+    marginBottom: 8,
+  },
+  moodScrollContent: {
+    paddingHorizontal: 8,
+  },
+  moodItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 96,
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 6,
+  },
+  moodItemInactive: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  moodEmoji: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  moodLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#1f2937',
+  },
+  moodLabelSelected: {
+    color: '#ffffff',
+  },
+  reflectionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+  },
+  reflectionIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reflectionContent: {
+    flex: 1,
+  },
+  reflectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  reflectionSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  promptCard: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+  },
+  promptText: {
+    fontSize: 16,
+    color: '#374151',
+    fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  promptButton: {
+    width: '100%',
+    backgroundColor: '#7c3aed',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  promptButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  journalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  journalItemContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  journalItemTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  journalItemDate: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  journalItemPreview: {
+    fontSize: 12,
+    color: '#4b5563',
+    marginTop: 4,
+  },
+  viewAllButton: {
+    width: '100%',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  viewAllText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#7c3aed',
+    textAlign: 'center',
+  },
+  emptyState: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  startJournalingButton: {
+    width: '100%',
+    backgroundColor: '#7c3aed',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  startJournalingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+});
 
 export default HomeScreen;
