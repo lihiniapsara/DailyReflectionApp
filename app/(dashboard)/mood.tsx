@@ -1,145 +1,208 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronLeft } from 'react-native-feather';
-import { Mood } from '../../types';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, Stack } from 'expo-router';
+import { JournalEntry } from '@/types/JournalEntry';
+import { auth, db } from '@/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
-interface MoodScreenProps {
-  setCurrentScreen?: (screen: string) => void;
-  moods?: Mood[]; // Made optional
-  selectedMood?: string;
-  setSelectedMood?: (mood: string) => void;
-}
+// Mood options
+const moodOptions: { label: string; value: number; emoji: string; color: string }[] = [
+  { label: 'Amazing', value: 5, emoji: '😊', color: 'bg-green-500' },
+  { label: 'Good', value: 4, emoji: '🙂', color: 'bg-blue-500' },
+  { label: 'Okay', value: 3, emoji: '😐', color: 'bg-yellow-500' },
+  { label: 'Not Great', value: 2, emoji: '😞', color: 'bg-orange-500' },
+  { label: 'Awful', value: 1, emoji: '😢', color: 'bg-red-500' },
+];
 
-const MoodScreen: React.FC<MoodScreenProps> = ({ setCurrentScreen, moods = [], selectedMood = '', setSelectedMood }) => {
-  // Sample default moods (can be moved to types file or parent)
-  const defaultMoods: Mood[] = [
-    { emoji: '😊', label: 'Amazing', value: 'amazing' },
-    { emoji: '🙂', label: 'Good', value: 'good' },
-    { emoji: '😐', label: 'Okay', value: 'okay' },
-    { emoji: '😞', label: 'Not Great', value: 'not-great' },
-    { emoji: '😠', label: 'Awful', value: 'awful' },
-  ];
-
-  // Use passed moods or fallback to default moods
-  const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
-
+// Journal item component
+const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
+  const router = useRouter();
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setCurrentScreen?.('home')}>
-          <ChevronLeft size={20} color="#4B5563" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mood</Text>
-        <View style={styles.headerSpacer} />
+    <TouchableOpacity
+      className="flex-row items-center justify-between p-3 bg-white border border-gray-200 rounded-xl mb-2"
+      onPress={() => router.push(`/journal/${entry.id}`)}
+      accessibilityLabel={`View journal entry: ${entry.title}`}
+      accessibilityRole="button"
+    >
+      <View className="flex-1">
+        <Text className="text-sm font-medium text-gray-900">{entry.title}</Text>
+        <Text className="text-xs text-gray-500">
+          {entry.date} • {entry.mood}
+        </Text>
+        <Text className="text-xs text-gray-600 line-clamp-2">
+          {entry.content}
+        </Text>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>How are you feeling today?</Text>
-        <View style={styles.moodGrid}>
-          {moodsToDisplay.map((mood, index) => (
-            <TouchableOpacity
-              key={mood.value}
-              style={[
-                styles.moodButton,
-                selectedMood === mood.value && styles.moodButtonSelected,
-                index > 2 && styles.moodButtonLastRow,
-              ]}
-              onPress={() => setSelectedMood?.(mood.value)}
-            >
-              <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-              <Text style={styles.moodLabel}>{mood.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={() => setCurrentScreen?.('home')}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+    </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 20,
-  },
-  content: {
-    padding: 16,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-  },
-  moodButton: {
-    width: '30%',
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  moodButtonSelected: {
-    borderColor: '#A78BFA',
-    backgroundColor: '#F5F3FF',
-    transform: [{ scale: 1.05 }],
-  },
-  moodButtonLastRow: {
-    marginTop: 12,
-  },
-  moodEmoji: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  moodLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  nextButton: {
-    backgroundColor: '#7C3AED',
-    paddingVertical: 14,
-    borderRadius: 9999,
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-});
+const HomeScreen: React.FC = () => {
+  const router = useRouter();
+  const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
 
-export default MoodScreen;
+  // Fetch journal entries from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'journal'), (querySnapshot) => {
+      const allJournals = querySnapshot.docs
+        .filter((doc) => doc.data().userId === auth.currentUser?.uid)
+        .map(
+          (doc) =>
+            ({
+              ...doc.data(),
+              id: doc.id,
+            } as JournalEntry)
+        );
+      setJournal(allJournals);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <Stack.Screen options={{ title: 'Daily Reflection' }} />
+
+      {/* Header */}
+      <View className="flex-row items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
+        <View>
+          <Text className="text-xl font-semibold text-gray-900">
+            Daily Reflection Dashboard
+          </Text>
+          <Text className="text-sm text-gray-500">
+            Today, {new Date().toLocaleDateString()}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/settings')}
+          accessibilityLabel="Settings"
+          accessibilityRole="button"
+        >
+          <Ionicons name="settings" size={20} color="#4B5563" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Content */}
+      <ScrollView className="p-4" contentContainerStyle={{ paddingBottom: 64 }}>
+        {/* Mood Selection */}
+        <View className="space-y-4">
+          <Text className="text-xl font-bold text-gray-900">
+            How are you feeling today?
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="flex-row space-x-3"
+          >
+            {moodOptions.map((mood) => (
+              <TouchableOpacity
+                key={mood.value}
+                className={`flex-col items-center justify-center w-24 h-28 rounded-2xl p-3 shadow-md ${
+                  selectedMood === mood.value
+                    ? 'bg-purple-500'
+                    : 'bg-white border border-gray-200'
+                }`}
+                onPress={() => {
+                  setSelectedMood(mood.value);
+                  router.push(`/mood?mood=${mood.label}`);
+                }}
+                accessibilityLabel={`Select ${mood.label} mood`}
+                accessibilityRole="button"
+              >
+                <Text className="text-4xl mb-2">{mood.emoji}</Text>
+                <Text
+                  className={`text-sm font-semibold ${
+                    selectedMood === mood.value ? 'text-white' : 'text-gray-800'
+                  }`}
+                >
+                  {mood.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Daily Reflection */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">
+            Daily Reflection
+          </Text>
+          <TouchableOpacity
+            className="flex-row items-center p-3 bg-white border border-gray-200 rounded-xl"
+            onPress={() => router.push('/journal')}
+            accessibilityLabel="Journal"
+            accessibilityRole="button"
+          >
+            <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center mr-3">
+              <Ionicons name="book" size={16} color="#7C3AED" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-gray-900">
+                Journal Entry
+              </Text>
+              <Text className="text-xs text-gray-500">Tap to start writing</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Daily Prompt */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">
+            Daily Prompt
+          </Text>
+          <View className="p-3 bg-white border border-gray-200 rounded-xl">
+            <Text className="text-sm text-gray-600 italic mb-3">
+              "What is one thing you're grateful for today?"
+            </Text>
+            <TouchableOpacity
+              className="w-full bg-purple-600 py-3 rounded-full"
+              onPress={() => router.push('/journal')}
+              accessibilityLabel="Write about daily prompt"
+              accessibilityRole="button"
+            >
+              <Text className="text-sm font-medium text-white text-center">
+                Write about it
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Recent Journal Entries */}
+        <View className="space-y-3 mt-6">
+          <Text className="text-lg font-semibold text-gray-900">
+            Recent Entries
+          </Text>
+          {journal.slice(0, 3).map((entry) => (
+            <JournalEntryItem key={entry.id} entry={entry} />
+          ))}
+          {journal.length > 3 && (
+            <TouchableOpacity
+              className="w-full py-2"
+              onPress={() => router.push('/journal')}
+              accessibilityLabel="View all journal entries"
+              accessibilityRole="button"
+            >
+              <Text className="text-sm font-medium text-purple-600 text-center">
+                View All Entries
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default HomeScreen;
+
+

@@ -1,5 +1,5 @@
 export interface JournalEntry {
-  id: number;
+  id ?: string;
   title: string;
   content: string;
   date: string;
