@@ -71,6 +71,15 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   ).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
 
+  // Mood color mapping
+  const moodColorMap = {
+    amazing: "#22c55e",
+    good: "#3b82f6",
+    okay: "#eab308",
+    notGreat: "#f97316",
+    awful: "#ef4444",
+  };
+
   // Handle mood button animation
   const animateMoodButton = (index: number) => {
     Animated.timing(animatedValues[index], {
@@ -152,7 +161,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-1 bg-gray-50">
         {/* Modal for New Journal Entry */}
         <Modal
@@ -168,7 +177,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             className="flex-1 justify-center items-center bg-black/50"
             style={{ opacity: modalOpacity }}
           >
-            <View className="bg-white rounded-2xl p-6 w-11/12 max-w-md shadow-lg">
+            <View className="bg-white rounded-2xl p-6 w-11/12 max-w-md">
               <Text className="text-xl font-bold text-gray-900 mb-4">
                 New Journal Entry
               </Text>
@@ -237,9 +246,14 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                     <TouchableOpacity
                       className={`flex-col items-center justify-center w-20 h-20 rounded-xl p-2 mb-2 ${
                         newEntry.mood === mood.value
-                          ? `${mood.color.replace("bg-", "bg-gradient-to-r from-")} via-${mood.color.replace("bg-", "")}/90 to-${mood.color.replace("bg-", "")}/70 text-white shadow-md`
-                          : "bg-white border border-gray-200 shadow-sm"
+                          ? "bg-white border border-gray-200"
+                          : "bg-white border border-gray-200"
                       }`}
+                      style={
+                        newEntry.mood === mood.value
+                          ? { backgroundColor: moodColorMap[mood.value] }
+                          : {}
+                      }
                       onPress={() => {
                         setNewEntry({ ...newEntry, mood: mood.value });
                         animateMoodButton(index);
@@ -263,7 +277,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               </View>
 
               {/* Buttons */}
-              <View className="flex-row justify-end space-x-2">
+              <View className="flex-row justify-end" style={{ gap: 8 }}>
                 <TouchableOpacity
                   className="bg-gray-200 py-2 px-4 rounded-full"
                   onPress={() => {
@@ -281,8 +295,13 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   className={`py-2 px-4 rounded-full ${
                     !newEntry.title || !newEntry.content || !newEntry.mood
                       ? "bg-gray-400"
-                      : "bg-gradient-to-r from-purple-600 to-purple-500"
+                      : ""
                   }`}
+                  style={
+                    !newEntry.title || !newEntry.content || !newEntry.mood
+                      ? {}
+                      : { backgroundColor: "#7c3aed" }
+                  }
                   onPress={handleSubmit}
                   disabled={
                     !newEntry.title || !newEntry.content || !newEntry.mood
@@ -308,22 +327,26 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         {/* Header */}
         <View className="flex-row justify-between items-center bg-white px-4 py-4 border-b border-gray-200">
           <Text className="text-xl font-semibold text-gray-900">Journal</Text>
-          <TouchableOpacity
-            className="bg-gradient-to-r from-purple-600 to-purple-500 py-2 px-4 rounded-full shadow-sm"
-            onPress={openModal}
-            accessibilityLabel="Add new journal entry"
-            accessibilityRole="button"
-          >
-            <Text className="text-sm font-medium text-white">+ New</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Content */}
         <ScrollView className="p-4">
+          {/* Add New Journal Button at the Top */}
+          <TouchableOpacity
+            className="bg-purple-600 py-3 rounded-lg mb-4"
+            onPress={openModal}
+            accessibilityLabel="Add new journal entry"
+            accessibilityRole="button"
+          >
+            <Text className="text-base font-medium text-white text-center">
+              + New Journal Entry
+            </Text>
+          </TouchableOpacity>
+
           {entriesToDisplay.map((entry) => (
             <TouchableOpacity
               key={entry.id}
-              className="bg-white p-4 rounded-xl border border-gray-200 mb-3 shadow-sm"
+              className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
               onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
               accessibilityLabel={`View journal entry: ${entry.title}`}
               accessibilityRole="button"
@@ -334,7 +357,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                 </Text>
                 <Text className="text-xs text-gray-500">{entry.date}</Text>
               </View>
-              <Text className="text-xs text-gray-600 line-clamp-2 mb-2">
+              <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
                 {entry.content}
               </Text>
               <View className="flex-row justify-between items-center">
