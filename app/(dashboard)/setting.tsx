@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -127,26 +126,32 @@ const SettingOption = memo(
 
     return (
       <TouchableOpacity
-        style={styles.option}
+        className="flex-row justify-between items-center p-3 border-b border-gray-100"
         onPress={() => onPress(option.route)}
         accessibilityLabel={option.title}
         accessibilityRole="button"
       >
-        <View style={styles.optionContent}>
+        <View className="flex-row items-center">
           <Ionicons name={option.icon} size={16} color="#4B5563" />
-          <Text style={styles.optionText}>{option.title}</Text>
+          <Text className="text-sm text-gray-900 ml-3">{option.title}</Text>
         </View>
-        <View style={styles.chevron}>
+        <View className="flex-row items-center">
           {option.extraText && (
-            <Text style={styles.timeText}>{option.extraText}</Text>
+            <Text className="text-sm text-gray-500 mr-2">{option.extraText}</Text>
           )}
           {option.toggle !== undefined ? (
             <TouchableOpacity
-              style={isToggled ? styles.toggleOn : styles.toggleOff}
+              className={`w-10 h-5 rounded-full justify-center px-0.5 ${
+                isToggled ? "bg-blue-600" : "bg-gray-300"
+              }`}
               onPress={() => setIsToggled(!isToggled)}
               accessibilityLabel={`${option.title} toggle`}
             >
-              <View style={styles.toggleDot} />
+              <View
+                className={`w-4 h-4 bg-white rounded-full ${
+                  isToggled ? "ml-5" : "mr-5"
+                }`}
+              />
             </TouchableOpacity>
           ) : (
             <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
@@ -165,9 +170,11 @@ const SettingsScreen: React.FC = () => {
   };
 
   const renderSection = ({ item }: { item: Section }) => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{item.title}</Text>
-      <View style={styles.card}>
+    <View className="mb-4">
+      <Text className="text-xs font-medium text-gray-500 uppercase ml-4 mb-2">
+        {item.title}
+      </Text>
+      <View className="bg-white">
         <FlatList
           data={item.options}
           keyExtractor={(option) => option.id}
@@ -181,21 +188,21 @@ const SettingsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView>
-      <View style={styles.container}>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-gray-50">
         <Stack.Screen options={{ title: "Settings" }} />
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Settings</Text>
+        <View className="bg-white px-4 py-4 items-center">
+          <Text className="text-xl font-semibold text-gray-900">Settings</Text>
         </View>
-        <View style={styles.searchContainer}>
+        <View className="flex-row items-center bg-white rounded-lg border border-gray-200 mx-4 my-4 px-3 py-2">
           <Ionicons
             name="search"
             size={16}
             color="#9CA3AF"
-            style={styles.searchIcon}
+            className="mr-2"
           />
           <TextInput
-            style={styles.searchInput}
+            className="flex-1 py-0 text-sm text-gray-900"
             placeholder="Search settings"
             placeholderTextColor="#9CA3AF"
             accessibilityLabel="Search settings input"
@@ -206,111 +213,12 @@ const SettingsScreen: React.FC = () => {
           keyExtractor={(section) => section.title}
           renderItem={renderSection}
           showsVerticalScrollIndicator={false}
+          className="px-4"
           contentContainerStyle={{ paddingBottom: 64 }}
         />
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
-  header: {
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 0,
-    fontSize: 14,
-    color: "#1F2937",
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#6B7280",
-    textTransform: "uppercase",
-    marginLeft: 16,
-    marginBottom: 8,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-  },
-  option: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  optionContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  optionText: {
-    fontSize: 14,
-    color: "#1F2937",
-    marginLeft: 12,
-  },
-  chevron: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  toggleOn: {
-    width: 40,
-    height: 20,
-    backgroundColor: "#2563EB",
-    borderRadius: 9999,
-    justifyContent: "center",
-    paddingHorizontal: 2,
-  },
-  toggleOff: {
-    width: 40,
-    height: 20,
-    backgroundColor: "#D1D5DB",
-    borderRadius: 9999,
-    justifyContent: "center",
-    paddingHorizontal: 2,
-  },
-  toggleDot: {
-    width: 16,
-    height: 16,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 9999,
-    marginLeft: "auto",
-  },
-  timeText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginRight: 8,
-  },
-});
 
 export default SettingsScreen;
