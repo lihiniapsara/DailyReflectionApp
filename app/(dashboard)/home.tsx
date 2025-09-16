@@ -25,31 +25,31 @@ const moodOptions: { label: string; value: number; emoji: string; color: string 
   { label: 'Awful', value: 1, emoji: '😢', color: 'bg-red-500' },
 ];
 
-// Calculate mood item width based on screen size
-const moodItemWidth = (width - 48) / 4.5; // 48 = padding (24*2), divided by 4.5 to show partial next item
+// Calculate mood item width based on screen size - more mobile friendly
+const moodItemWidth = width < 400 ? (width - 48) / 3.5 : (width - 64) / 4.5;
 
 // Journal item component
 const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   const router = useRouter();
   return (
     <TouchableOpacity
-      className="flex-row items-center justify-between p-3 bg-white border border-gray-200 rounded-xl mb-2"
+      className="flex-row items-center justify-between p-4 bg-white border border-gray-200 rounded-lg mb-3"
       onPress={() => router.push(`/journal/${entry.id}`)}
       accessibilityLabel={`View journal entry: ${entry.title}`}
       accessibilityRole="button"
     >
-      <View className="flex-1">
-        <Text className="text-sm font-medium text-gray-900" numberOfLines={1}>
+      <View className="flex-1 mr-3">
+        <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
           {entry.title}
         </Text>
-        <Text className="text-xs text-gray-500">
+        <Text className="text-xs text-gray-500 mt-1">
           {entry.date} • {entry.mood}
         </Text>
-        <Text className="text-xs text-gray-600" numberOfLines={2}>
+        <Text className="text-sm text-gray-600 mt-1" numberOfLines={2}>
           {entry.content}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
     </TouchableOpacity>
   );
 };
@@ -82,12 +82,12 @@ const HomeScreen: React.FC = () => {
       <Stack.Screen options={{ title: 'Daily Reflection' }} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
-        <View className="flex-1 mr-2">
-          <Text className="text-lg font-semibold text-gray-900" numberOfLines={1}>
-            Daily Reflection Dashboard
+      <View className="flex-row items-center justify-between bg-white px-4 py-3 border-b border-gray-200">
+        <View className="flex-1 mr-3">
+          <Text className="text-lg font-bold text-gray-900" numberOfLines={1}>
+            Daily Reflection
           </Text>
-          <Text className="text-xs text-gray-500">
+          <Text className="text-xs text-gray-500 mt-1">
             Today, {new Date().toLocaleDateString()}
           </Text>
         </View>
@@ -97,38 +97,36 @@ const HomeScreen: React.FC = () => {
           accessibilityRole="button"
           className="p-2"
         >
-          <Ionicons name="settings" size={20} color="#4B5563" />
+          <Ionicons name="settings-outline" size={22} color="#4B5563" />
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
       <ScrollView 
-        className="p-4" 
-        contentContainerStyle={{ paddingBottom: 64 }}
+        className="flex-1"
+        contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Mood Selection */}
-        <View className="space-y-4">
-          <Text className="text-lg font-bold text-gray-900">
+        <View className="mb-6">
+          <Text className="text-lg font-bold text-gray-900 mb-3">
             How are you feeling today?
           </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            className="flex-row -mx-1"
-            contentContainerStyle={{ paddingHorizontal: 4 }}
-            snapToInterval={moodItemWidth + 8} // 8 = margin between items
-            decelerationRate="fast"
+            className="mb-2"
+            contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 8 }}
           >
             {moodOptions.map((mood) => (
               <TouchableOpacity
                 key={mood.value}
-                style={{ width: moodItemWidth }}
-                className={`flex-col items-center justify-center h-28 rounded-2xl p-2 shadow-md mx-1 ${
-                  selectedMood === mood.value
-                    ? 'bg-purple-500'
+                style={{ width: moodItemWidth, marginHorizontal: 6 }}
+                className={`flex-col items-center justify-center h-28 rounded-xl p-3
+                  ${selectedMood === mood.value
+                    ? `${mood.color}`
                     : 'bg-white border border-gray-200'
-                }`}
+                  }`}
                 onPress={() => {
                   setSelectedMood(mood.value);
                   router.push(`/mood?mood=${mood.label}`);
@@ -138,9 +136,8 @@ const HomeScreen: React.FC = () => {
               >
                 <Text className="text-3xl mb-1">{mood.emoji}</Text>
                 <Text
-                  className={`text-xs font-semibold text-center ${
-                    selectedMood === mood.value ? 'text-white' : 'text-gray-800'
-                  }`}
+                  className={`text-xs font-semibold text-center
+                    ${selectedMood === mood.value ? 'text-white' : 'text-gray-800'}`}
                   numberOfLines={1}
                 >
                   {mood.label}
@@ -151,45 +148,45 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* Daily Reflection */}
-        <View className="space-y-3 mt-6">
-          <Text className="text-base font-semibold text-gray-900">
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">
             Daily Reflection
           </Text>
           <TouchableOpacity
-            className="flex-row items-center p-3 bg-white border border-gray-200 rounded-xl"
+            className="flex-row items-center p-4 bg-white border border-gray-200 rounded-lg"
             onPress={() => router.push('/journal')}
             accessibilityLabel="Journal"
             accessibilityRole="button"
           >
-            <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center mr-3">
-              <Ionicons name="book" size={16} color="#7C3AED" />
+            <View className="w-10 h-10 bg-purple-100 rounded-full items-center justify-center mr-3">
+              <Ionicons name="book-outline" size={20} color="#7C3AED" />
             </View>
             <View className="flex-1">
-              <Text className="text-sm font-medium text-gray-900">
+              <Text className="text-base font-medium text-gray-900">
                 Journal Entry
               </Text>
-              <Text className="text-xs text-gray-500">Tap to start writing</Text>
+              <Text className="text-sm text-gray-500">Tap to start writing</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
         {/* Daily Prompt */}
-        <View className="space-y-3 mt-6">
-          <Text className="text-base font-semibold text-gray-900">
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">
             Daily Prompt
           </Text>
-          <View className="p-3 bg-white border border-gray-200 rounded-xl">
-            <Text className="text-sm text-gray-600 italic mb-3">
+          <View className="p-4 bg-white border border-gray-200 rounded-lg">
+            <Text className="text-base text-gray-700 italic mb-4">
               "What is one thing you're grateful for today?"
             </Text>
             <TouchableOpacity
-              className="w-full bg-purple-600 py-3 rounded-full"
+              className="w-full bg-purple-600 py-3 rounded-lg"
               onPress={() => router.push('/journal')}
               accessibilityLabel="Write about daily prompt"
               accessibilityRole="button"
             >
-              <Text className="text-sm font-medium text-white text-center">
+              <Text className="text-base font-medium text-white text-center">
                 Write about it
               </Text>
             </TouchableOpacity>
@@ -197,8 +194,8 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* Recent Journal Entries */}
-        <View className="space-y-3 mt-6">
-          <Text className="text-base font-semibold text-gray-900">
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">
             Recent Entries
           </Text>
           {journal.length > 0 ? (
@@ -208,22 +205,30 @@ const HomeScreen: React.FC = () => {
               ))}
               {journal.length > 3 && (
                 <TouchableOpacity
-                  className="w-full py-2"
+                  className="w-full py-3 mt-2"
                   onPress={() => router.push('/journal')}
                   accessibilityLabel="View all journal entries"
                   accessibilityRole="button"
                 >
-                  <Text className="text-sm font-medium text-purple-600 text-center">
-                    View All Entries
+                  <Text className="text-base font-medium text-purple-600 text-center">
+                    View All Entries ({journal.length})
                   </Text>
                 </TouchableOpacity>
               )}
             </>
           ) : (
-            <View className="p-4 bg-white border border-gray-200 rounded-xl">
-              <Text className="text-sm text-gray-500 text-center">
+            <View className="p-4 bg-white border border-gray-200 rounded-lg">
+              <Text className="text-base text-gray-500 text-center mb-4">
                 No journal entries yet. Start by writing your first entry!
               </Text>
+              <TouchableOpacity
+                className="w-full bg-purple-600 py-3 rounded-lg"
+                onPress={() => router.push('/journal')}
+              >
+                <Text className="text-base font-medium text-white text-center">
+                  Start Journaling
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
