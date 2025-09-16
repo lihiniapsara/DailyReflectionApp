@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { ChevronRight } from "react-native-feather";
 import { JournalEntry } from "../../types/JournalEntry";
 import { Mood, defaultMoods } from "../../types/Mood";
 import { createJournal } from "@/services/journalService";
+import { useLocalSearchParams, useFocusEffect } from "expo-router";
 
 interface JournalScreenProps {
   setCurrentScreen?: (screen: string) => void;
@@ -30,6 +31,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   journalEntries = [],
   moods = [],
 }) => {
+  const { prompt } = useLocalSearchParams();
+  const [promptReceived, setPromptReceived] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(true);
+  
   // Sample data
   const defaultJournalEntries: JournalEntry[] = [
     {
@@ -59,11 +64,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     id: "",
     title: "",
     content: "",
-    date: new Date().toISOString().split("T")[0], // Default to current date
+    date: new Date().toISOString().split("T")[0],
     mood: "",
   });
-  const [tempEntries, setTempEntries] =
-    useState<JournalEntry[]>(entriesToDisplay);
+  const [tempEntries, setTempEntries] = useState<JournalEntry[]>(entriesToDisplay);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const animatedValues = useRef(
@@ -80,19 +84,44 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     awful: "#ef4444",
   };
 
+  // Reset prompt state when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setPromptReceived(false);
+    }, [])
+  );
+
+  // Auto-open modal if prompt is passed and it's the first time
+  useEffect(() => {
+    if (prompt && isFirstTime) {
+      // Set the prompt as the title and add some default content
+      setNewEntry({
+        id: "",
+        title: "Daily Reflection",
+        content: `Prompt: ${prompt}\n\n`,
+        date: new Date().toISOString().split("T")[0],
+        mood: "",
+      });
+      setModalVisible(true);
+      animateModal(true);
+      setIsFirstTime(false); // Mark as not first time anymore
+    }
+  }, [prompt, isFirstTime]);
+
   // Handle mood button animation
   const animateMoodButton = (index: number) => {
-    Animated.timing(animatedValues[index], {
-      toValue: 1.1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.sequence([
+      Animated.timing(animatedValues[index], {
+        toValue: 1.1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
       Animated.timing(animatedValues[index], {
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
-      }).start();
-    });
+      })
+    ]).start();
   };
 
   // Handle modal animation
@@ -141,23 +170,37 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       const newId = (tempEntries.length + 1).toString();
       await createJournal(newEntry);
       setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
-      setModalVisible(false);
-      setNewEntry({
-        id: "",
-        title: "",
-        content: "",
-        date: new Date().toISOString().split("T")[0],
-        mood: "",
-      });
-      setDate(new Date());
-      animateModal(false);
+      closeModal();
     }
   };
 
   // Open modal
   const openModal = () => {
+    setNewEntry({
+      id: "",
+      title: "",
+      content: "",
+      date: new Date().toISOString().split("T")[0],
+      mood: "",
+    });
+    setDate(new Date());
     setModalVisible(true);
     animateModal(true);
+    setIsFirstTime(false); // Ensure modal doesn't auto-open again
+  };
+
+  // Close modal and reset form
+  const closeModal = () => {
+    setModalVisible(false);
+    animateModal(false);
+    setNewEntry({
+      id: "",
+      title: "",
+      content: "",
+      date: new Date().toISOString().split("T")[0],
+      mood: "",
+    });
+    setDate(new Date());
   };
 
   return (
@@ -165,13 +208,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       <View className="flex-1 bg-gray-50">
         {/* Modal for New Journal Entry */}
         <Modal
-          animationType="none"
+          animationType="fade"
           transparent={true}
           visible={isModalVisible}
-          onRequestClose={() => {
-            setModalVisible(false);
-            animateModal(false);
-          }}
+          onRequestClose={closeModal}
         >
           <Animated.View
             className="flex-1 justify-center items-center bg-black/50"
@@ -280,10 +320,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               <View className="flex-row justify-end" style={{ gap: 8 }}>
                 <TouchableOpacity
                   className="bg-gray-200 py-2 px-4 rounded-full"
-                  onPress={() => {
-                    setModalVisible(false);
-                    animateModal(false);
-                  }}
+                  onPress={closeModal}
                   accessibilityLabel="Cancel new journal entry"
                   accessibilityRole="button"
                 >
@@ -295,13 +332,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   className={`py-2 px-4 rounded-full ${
                     !newEntry.title || !newEntry.content || !newEntry.mood
                       ? "bg-gray-400"
-                      : ""
+                      : "bg-purple-600"
                   }`}
-                  style={
-                    !newEntry.title || !newEntry.content || !newEntry.mood
-                      ? {}
-                      : { backgroundColor: "#7c3aed" }
-                  }
                   onPress={handleSubmit}
                   disabled={
                     !newEntry.title || !newEntry.content || !newEntry.mood
@@ -343,7 +375,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {entriesToDisplay.map((entry) => (
+          {tempEntries.map((entry) => (
             <TouchableOpacity
               key={entry.id}
               className="bg-white p-4 rounded-xl border border-gray-200 mb-3"

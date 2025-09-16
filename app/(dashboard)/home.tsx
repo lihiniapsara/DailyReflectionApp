@@ -239,26 +239,33 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* Daily Prompt */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">
-            Daily Prompt
-          </Text>
-          <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <Text className="text-base text-gray-700 italic mb-4">
-              "What is one thing you're grateful for today?"
-            </Text>
-            <TouchableOpacity
-              className="w-full bg-purple-600 py-3 rounded-lg"
-              onPress={() => router.push("/journal")}
-              accessibilityLabel="Write about daily prompt"
-              accessibilityRole="button"
-            >
-              <Text className="text-base font-medium text-white text-center">
-                Write about it
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+{/* Daily Prompt */}
+<View className="mb-6">
+  <Text className="text-lg font-semibold text-gray-900 mb-4">
+    Daily Prompt
+  </Text>
+  <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
+    <Text className="text-base text-gray-700 italic mb-4">
+      "What is one thing you're grateful for today?"
+    </Text>
+    <TouchableOpacity
+      className="w-full bg-purple-600 py-3 rounded-lg"
+      onPress={() => {
+        // Navigate to journal tab with prompt parameter
+        router.push({
+          pathname: "/journal",
+          params: { prompt: "What is one thing you're grateful for today?" }
+        });
+      }}
+      accessibilityLabel="Write about daily prompt"
+      accessibilityRole="button"
+    >
+      <Text className="text-base font-medium text-white text-center">
+        Write about it
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
 
         {/* Recent Journal Entries */}
         <View className="mb-6">
