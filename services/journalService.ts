@@ -6,6 +6,9 @@ import { addDoc, collection, getDocs } from "firebase/firestore";
 
 export const journalRef = collection(db,"journal")
 
+
+
+
 export const createJournal = async (journal: JournalEntry) => {
     console.log(journal , "  kkk")
     console.log(auth.currentUser?.uid)

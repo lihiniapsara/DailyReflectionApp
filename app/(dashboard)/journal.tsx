@@ -9,6 +9,8 @@ import {
   Platform,
   Animated,
   SafeAreaView,
+  Alert,
+  RefreshControl,
 } from "react-native";
 import {
   DateTimePickerAndroid,
@@ -21,6 +23,7 @@ import { createJournal } from "@/services/journalService";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface JournalScreenProps {
   setCurrentScreen?: (screen: string) => void;
@@ -36,6 +39,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   const { prompt } = useLocalSearchParams();
   const [promptReceived, setPromptReceived] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState(false);
   
   // State for journal entries from Firestore
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -69,37 +74,85 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     awful: "#ef4444",
   };
 
-  // Fetch journal entries from Firestore
-  useEffect(() => {
-    const q = query(
-      collection(db, "journal"),
-      where("userId", "==", auth.currentUser?.uid)
-      // Remove orderBy until index is created to avoid the error
-      // orderBy("date", "desc")
-    );
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const journalEntries = querySnapshot.docs.map(
-        (doc) =>
-          ({
-            ...doc.data(),
-            id: doc.id,
-          }) as JournalEntry
-      );
-      // Sort manually on the client side as a temporary solution
-      const sortedEntries = journalEntries.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      setEntries(sortedEntries);
-    });
+  // Helper functions to store and retrieve last update time
+  const getLastUpdateTime = async (): Promise<number> => {
+    try {
+      const time = await AsyncStorage.getItem('lastJournalUpdateTime');
+      return time ? parseInt(time, 10) : 0;
+    } catch (error) {
+      console.error("Error getting last update time:", error);
+      return 0;
+    }
+  };
 
-    return () => unsubscribe();
+  const setLastUpdateTime = async (time: number): Promise<void> => {
+    try {
+      await AsyncStorage.setItem('lastJournalUpdateTime', time.toString());
+    } catch (error) {
+      console.error("Error setting last update time:", error);
+    }
+  };
+
+  // Fetch journal entries from Firestore
+  const fetchJournalEntries = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const q = query(
+        collection(db, "journal"),
+        where("userId", "==", auth.currentUser?.uid)
+      );
+      
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const journalEntries = querySnapshot.docs.map(
+          (doc) =>
+            ({
+              ...doc.data(),
+              id: doc.id,
+            }) as JournalEntry
+        );
+        // Sort manually on the client side as a temporary solution
+        const sortedEntries = journalEntries.sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        setEntries(sortedEntries);
+        setRefreshing(false);
+        setLastRefreshed(new Date());
+        setLastUpdateTime(Date.now());
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error fetching journal entries:", error);
+      setRefreshing(false);
+      return () => {}; // Return empty function
+    }
   }, []);
 
-  // Reset prompt state when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = fetchJournalEntries();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // Check if we need to refresh data on focus
   useFocusEffect(
     React.useCallback(() => {
       setPromptReceived(false);
+      
+      // Check if 24 hours have passed since last refresh
+      const checkForUpdate = async () => {
+        const lastUpdateTime = await getLastUpdateTime();
+        const now = Date.now();
+        const hoursSinceLastRefresh = (now - lastUpdateTime) / (1000 * 60 * 60);
+        
+        if (hoursSinceLastRefresh >= 24) {
+          fetchJournalEntries();
+          Alert.alert("Journal Updated", "Your journal entries have been refreshed.");
+        }
+      };
+      
+      checkForUpdate();
     }, [])
   );
 
@@ -119,6 +172,12 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       setIsFirstTime(false); // Mark as not first time anymore
     }
   }, [prompt, isFirstTime]);
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    fetchJournalEntries();
+    Alert.alert("Refreshed", "Journal entries have been updated.");
+  };
 
   // Handle mood button animation
   const animateMoodButton = (index: number) => {
@@ -182,9 +241,12 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       try {
         await createJournal(newEntry);
         closeModal();
+        
+        // Refresh the entries after creating a new one
+        fetchJournalEntries();
       } catch (error) {
         console.error("Error creating journal entry:", error);
-        // Handle error (show message to user, etc.)
+        Alert.alert("Error", "Failed to create journal entry. Please try again.");
       }
     }
   };
@@ -374,10 +436,29 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         {/* Header */}
         <View className="flex-row justify-between items-center bg-white px-4 py-4 border-b border-gray-200">
           <Text className="text-xl font-semibold text-gray-900">Journal</Text>
+          <TouchableOpacity onPress={handleRefresh} disabled={refreshing}>
+            <Text className="text-purple-600 text-sm">
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
-        <ScrollView className="p-4">
+        <ScrollView 
+          className="p-4"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#7C3AED"
+            />
+          }
+        >
+          {/* Last updated info */}
+          <Text className="text-xs text-gray-500 mb-4 text-center">
+            Last updated: {lastRefreshed.toLocaleTimeString()}
+          </Text>
+
           {/* Add New Journal Button at the Top */}
           <TouchableOpacity
             className="bg-purple-600 py-3 rounded-lg mb-4"
