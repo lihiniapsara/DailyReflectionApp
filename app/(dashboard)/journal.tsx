@@ -19,6 +19,8 @@ import { JournalEntry } from "../../types/JournalEntry";
 import { Mood, defaultMoods } from "../../types/Mood";
 import { createJournal } from "@/services/journalService";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { auth, db } from "@/firebase";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 interface JournalScreenProps {
   setCurrentScreen?: (screen: string) => void;
@@ -35,27 +37,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   const [promptReceived, setPromptReceived] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
   
-  // Sample data
-  const defaultJournalEntries: JournalEntry[] = [
-    {
-      id: "1",
-      title: "First Day Reflection",
-      date: "2025-09-14",
-      content: "Today was a great day with good weather and a nice walk.",
-      mood: "good",
-    },
-    {
-      id: "2",
-      title: "Weekend Thoughts",
-      date: "2025-09-13",
-      content: "Spent the weekend relaxing, but felt a bit tired.",
-      mood: "okay",
-    },
-  ];
-
-  // Use passed data or fallback to default data
-  const entriesToDisplay =
-    journalEntries.length > 0 ? journalEntries : defaultJournalEntries;
+  // State for journal entries from Firestore
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  
+  // Use passed data or fallback to fetched data
+  const entriesToDisplay = journalEntries.length > 0 ? journalEntries : entries;
   const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
 
   // State for modal and form
@@ -67,7 +53,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     date: new Date().toISOString().split("T")[0],
     mood: "",
   });
-  const [tempEntries, setTempEntries] = useState<JournalEntry[]>(entriesToDisplay);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const animatedValues = useRef(
@@ -83,6 +68,33 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     notGreat: "#f97316",
     awful: "#ef4444",
   };
+
+  // Fetch journal entries from Firestore
+  useEffect(() => {
+    const q = query(
+      collection(db, "journal"),
+      where("userId", "==", auth.currentUser?.uid)
+      // Remove orderBy until index is created to avoid the error
+      // orderBy("date", "desc")
+    );
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const journalEntries = querySnapshot.docs.map(
+        (doc) =>
+          ({
+            ...doc.data(),
+            id: doc.id,
+          }) as JournalEntry
+      );
+      // Sort manually on the client side as a temporary solution
+      const sortedEntries = journalEntries.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setEntries(sortedEntries);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Reset prompt state when screen comes into focus
   useFocusEffect(
@@ -167,10 +179,13 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   // Handle form submission
   const handleSubmit = async () => {
     if (newEntry.title && newEntry.content && newEntry.mood) {
-      const newId = (tempEntries.length + 1).toString();
-      await createJournal(newEntry);
-      setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
-      closeModal();
+      try {
+        await createJournal(newEntry);
+        closeModal();
+      } catch (error) {
+        console.error("Error creating journal entry:", error);
+        // Handle error (show message to user, etc.)
+      }
     }
   };
 
@@ -375,33 +390,49 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {tempEntries.map((entry) => (
-            <TouchableOpacity
-              key={entry.id}
-              className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
-              onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
-              accessibilityLabel={`View journal entry: ${entry.title}`}
-              accessibilityRole="button"
-            >
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-sm font-medium text-gray-900">
-                  {entry.title}
+          {entriesToDisplay.length > 0 ? (
+            entriesToDisplay.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
+                onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
+                accessibilityLabel={`View journal entry: ${entry.title}`}
+                accessibilityRole="button"
+              >
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-sm font-medium text-gray-900">
+                    {entry.title}
+                  </Text>
+                  <Text className="text-xs text-gray-500">{entry.date}</Text>
+                </View>
+                <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
+                  {entry.content}
                 </Text>
-                <Text className="text-xs text-gray-500">{entry.date}</Text>
-              </View>
-              <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
-                {entry.content}
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-xs text-gray-600">
+                    {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
+                    {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
+                      "Unknown Mood"}
+                  </Text>
+                  <ChevronRight size={14} color="#9CA3AF" />
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <Text className="text-base text-gray-500 text-center mb-4">
+                No journal entries yet. Start by writing your first entry!
               </Text>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-gray-600">
-                  {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
-                  {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
-                    "Unknown Mood"}
+              <TouchableOpacity
+                className="w-full bg-purple-600 py-3 rounded-lg"
+                onPress={openModal}
+              >
+                <Text className="text-base font-medium text-white text-center">
+                  Start Journaling
                 </Text>
-                <ChevronRight size={14} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>

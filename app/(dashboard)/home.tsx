@@ -268,46 +268,51 @@ const HomeScreen: React.FC = () => {
 </View>
 
         {/* Recent Journal Entries */}
-        <View className="mb-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-gray-900">
-              Recent Entries
-            </Text>
-            {journal.length > 0 && (
-              <TouchableOpacity
-                onPress={() => router.push("/journal")}
-                accessibilityLabel="View all journal entries"
-                accessibilityRole="button"
-              >
-                <Text className="text-purple-600 text-sm font-medium">
-                  View All
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+    <View className="mb-6">
+  <View className="flex-row justify-between items-center mb-4">
+    <Text className="text-lg font-semibold text-gray-900">
+      Recent Entries
+    </Text>
+    {journal.length > 0 && (
+      <TouchableOpacity
+        onPress={() => router.push("/journal")}
+        accessibilityLabel="View all journal entries"
+        accessibilityRole="button"
+      >
+        <Text className="text-purple-600 text-sm font-medium">
+          View All
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
 
-          {journal.length > 0 ? (
-            <>
-              {journal.slice(0, 3).map((entry) => (
-                <JournalEntryItem key={entry.id} entry={entry} />
-              ))}
-            </>
-          ) : (
-            <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <Text className="text-base text-gray-500 text-center mb-4">
-                No journal entries yet. Start by writing your first entry!
-              </Text>
-              <TouchableOpacity
-                className="w-full bg-purple-600 py-3 rounded-lg"
-                onPress={() => router.push("/journal")}
-              >
-                <Text className="text-base font-medium text-white text-center">
-                  Start Journaling
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+  {journal.length > 0 ? (
+    <>
+      {journal.slice(0, 3).map((entry) => (
+        <TouchableOpacity
+          key={entry.id}
+          onPress={() => router.push(`/journal?entryId=${entry.id}`)}
+        >
+          <JournalEntryItem entry={entry} />
+        </TouchableOpacity>
+      ))}
+    </>
+  ) : (
+    <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
+      <Text className="text-base text-gray-500 text-center mb-4">
+        No journal entries yet. Start by writing your first entry!
+      </Text>
+      <TouchableOpacity
+        className="w-full bg-purple-600 py-3 rounded-lg"
+        onPress={() => router.push("/journal")}
+      >
+        <Text className="text-base font-medium text-white text-center">
+          Start Journaling
+        </Text>
+      </TouchableOpacity>
+    </View>
+  )}
+</View>
       </ScrollView>
     </SafeAreaView>
   );
