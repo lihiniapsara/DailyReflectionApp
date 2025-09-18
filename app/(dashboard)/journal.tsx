@@ -9,8 +9,6 @@ import {
   Platform,
   Animated,
   SafeAreaView,
-  Alert,
-  RefreshControl,
 } from "react-native";
 import {
   DateTimePickerAndroid,
@@ -22,31 +20,20 @@ import { Mood, defaultMoods } from "../../types/Mood";
 import { createJournal } from "@/services/journalService";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { auth, db } from "@/firebase";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { collection, onSnapshot } from "firebase/firestore";
 interface JournalScreenProps {
   setCurrentScreen?: (screen: string) => void;
-  journalEntries?: JournalEntry[];
   moods?: Mood[];
 }
 
 const JournalScreen: React.FC<JournalScreenProps> = ({
   setCurrentScreen,
-  journalEntries = [],
   moods = [],
 }) => {
   const { prompt } = useLocalSearchParams();
   const [promptReceived, setPromptReceived] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-  const [refreshing, setRefreshing] = useState(false);
-  
-  // State for journal entries from Firestore
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  
-  // Use passed data or fallback to fetched data
-  const entriesToDisplay = journalEntries.length > 0 ? journalEntries : entries;
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]); // State for real data
   const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
 
   // State for modal and form
@@ -58,6 +45,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     date: new Date().toISOString().split("T")[0],
     mood: "",
   });
+  const [tempEntries, setTempEntries] = useState<JournalEntry[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const animatedValues = useRef(
@@ -74,92 +62,38 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     awful: "#ef4444",
   };
 
-  // Helper functions to store and retrieve last update time
-  const getLastUpdateTime = async (): Promise<number> => {
-    try {
-      const time = await AsyncStorage.getItem('lastJournalUpdateTime');
-      return time ? parseInt(time, 10) : 0;
-    } catch (error) {
-      console.error("Error getting last update time:", error);
-      return 0;
-    }
-  };
-
-  const setLastUpdateTime = async (time: number): Promise<void> => {
-    try {
-      await AsyncStorage.setItem('lastJournalUpdateTime', time.toString());
-    } catch (error) {
-      console.error("Error setting last update time:", error);
-    }
-  };
-
-  // Fetch journal entries from Firestore
-  const fetchJournalEntries = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const q = query(
-        collection(db, "journal"),
-        where("userId", "==", auth.currentUser?.uid)
-      );
-      
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const journalEntries = querySnapshot.docs.map(
-          (doc) =>
-            ({
-              ...doc.data(),
-              id: doc.id,
-            }) as JournalEntry
-        );
-        // Sort manually on the client side as a temporary solution
-        const sortedEntries = journalEntries.sort((a, b) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-        setEntries(sortedEntries);
-        setRefreshing(false);
-        setLastRefreshed(new Date());
-        setLastUpdateTime(Date.now());
-      });
-
-      return unsubscribe;
-    } catch (error) {
-      console.error("Error fetching journal entries:", error);
-      setRefreshing(false);
-      return () => {}; // Return empty function
-    }
-  }, []);
-
+  // Fetch real-time journal entries from Firestore
   useEffect(() => {
-    const unsubscribe = fetchJournalEntries();
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    const unsubscribe = onSnapshot(
+      collection(db, "journal"),
+      (querySnapshot) => {
+        const allJournals = querySnapshot.docs
+          .filter((doc) => doc.data().userId === auth.currentUser?.uid)
+          .map(
+            (doc) =>
+              ({
+                ...doc.data(),
+                id: doc.id,
+              }) as JournalEntry
+          );
+        setJournalEntries(allJournals);
+        setTempEntries(allJournals); // Update tempEntries to reflect real data
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
-  // Check if we need to refresh data on focus
+  // Reset prompt state when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       setPromptReceived(false);
-      
-      // Check if 24 hours have passed since last refresh
-      const checkForUpdate = async () => {
-        const lastUpdateTime = await getLastUpdateTime();
-        const now = Date.now();
-        const hoursSinceLastRefresh = (now - lastUpdateTime) / (1000 * 60 * 60);
-        
-        if (hoursSinceLastRefresh >= 24) {
-          fetchJournalEntries();
-          Alert.alert("Journal Updated", "Your journal entries have been refreshed.");
-        }
-      };
-      
-      checkForUpdate();
     }, [])
   );
 
   // Auto-open modal if prompt is passed and it's the first time
   useEffect(() => {
     if (prompt && isFirstTime) {
-      // Set the prompt as the title and add some default content
       setNewEntry({
         id: "",
         title: "Daily Reflection",
@@ -169,15 +103,9 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       });
       setModalVisible(true);
       animateModal(true);
-      setIsFirstTime(false); // Mark as not first time anymore
+      setIsFirstTime(false);
     }
   }, [prompt, isFirstTime]);
-
-  // Handle manual refresh
-  const handleRefresh = () => {
-    fetchJournalEntries();
-    Alert.alert("Refreshed", "Journal entries have been updated.");
-  };
 
   // Handle mood button animation
   const animateMoodButton = (index: number) => {
@@ -191,7 +119,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
   };
 
@@ -238,16 +166,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   // Handle form submission
   const handleSubmit = async () => {
     if (newEntry.title && newEntry.content && newEntry.mood) {
-      try {
-        await createJournal(newEntry);
-        closeModal();
-        
-        // Refresh the entries after creating a new one
-        fetchJournalEntries();
-      } catch (error) {
-        console.error("Error creating journal entry:", error);
-        Alert.alert("Error", "Failed to create journal entry. Please try again.");
-      }
+      const newId = (tempEntries.length + 1).toString();
+      await createJournal({ ...newEntry, userId: auth.currentUser?.uid }); // Add userId to new entry
+      setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
+      closeModal();
     }
   };
 
@@ -263,7 +185,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     setDate(new Date());
     setModalVisible(true);
     animateModal(true);
-    setIsFirstTime(false); // Ensure modal doesn't auto-open again
+    setIsFirstTime(false);
   };
 
   // Close modal and reset form
@@ -436,29 +358,10 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         {/* Header */}
         <View className="flex-row justify-between items-center bg-white px-4 py-4 border-b border-gray-200">
           <Text className="text-xl font-semibold text-gray-900">Journal</Text>
-          <TouchableOpacity onPress={handleRefresh} disabled={refreshing}>
-            <Text className="text-purple-600 text-sm">
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Content */}
-        <ScrollView 
-          className="p-4"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor="#7C3AED"
-            />
-          }
-        >
-          {/* Last updated info */}
-          <Text className="text-xs text-gray-500 mb-4 text-center">
-            Last updated: {lastRefreshed.toLocaleTimeString()}
-          </Text>
-
+        <ScrollView className="p-4">
           {/* Add New Journal Button at the Top */}
           <TouchableOpacity
             className="bg-purple-600 py-3 rounded-lg mb-4"
@@ -471,49 +374,33 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {entriesToDisplay.length > 0 ? (
-            entriesToDisplay.map((entry) => (
-              <TouchableOpacity
-                key={entry.id}
-                className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
-                onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
-                accessibilityLabel={`View journal entry: ${entry.title}`}
-                accessibilityRole="button"
-              >
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-sm font-medium text-gray-900">
-                    {entry.title}
-                  </Text>
-                  <Text className="text-xs text-gray-500">{entry.date}</Text>
-                </View>
-                <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
-                  {entry.content}
+          {tempEntries.map((entry) => (
+            <TouchableOpacity
+              key={entry.id}
+              className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
+              onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
+              accessibilityLabel={`View journal entry: ${entry.title}`}
+              accessibilityRole="button"
+            >
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-sm font-medium text-gray-900">
+                  {entry.title}
                 </Text>
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-xs text-gray-600">
-                    {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
-                    {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
-                      "Unknown Mood"}
-                  </Text>
-                  <ChevronRight size={14} color="#9CA3AF" />
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <Text className="text-base text-gray-500 text-center mb-4">
-                No journal entries yet. Start by writing your first entry!
+                <Text className="text-xs text-gray-500">{entry.date}</Text>
+              </View>
+              <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
+                {entry.content}
               </Text>
-              <TouchableOpacity
-                className="w-full bg-purple-600 py-3 rounded-lg"
-                onPress={openModal}
-              >
-                <Text className="text-base font-medium text-white text-center">
-                  Start Journaling
+              <View className="flex-row justify-between items-center">
+                <Text className="text-xs text-gray-600">
+                  {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
+                  {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
+                    "Unknown Mood"}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                <ChevronRight size={14} color="#9CA3AF" />
+              </View>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
     </SafeAreaView>
