@@ -1,7 +1,7 @@
 import { db } from "@/firebase";
 import { Goal } from "@/types/Goal";
 import { auth } from "@/firebase";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, getDocs } from "firebase/firestore";
 
 export const goalRef = collection(db,"goal")
 
@@ -19,5 +19,20 @@ export const createGoal = async (goal:Goal) => {
     } catch (e) {
         console.error("Error adding document: ", e);
         throw e;
+    }
+}
+
+export const getAllGoals = async () => {
+    try {
+        const querySnapshot = await getDocs(goalRef);
+        console.log("Query Snapshot: ", querySnapshot);
+        return querySnapshot.docs.map((doc) => ({
+            ...doc.data(),
+            id: doc.id
+            
+        })) as Goal[];
+    } catch (e) {
+        console.error("Error getting documents: ", e);
+        return [];
     }
 }
