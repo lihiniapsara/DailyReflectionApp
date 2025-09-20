@@ -1,7 +1,7 @@
 import { db } from "@/firebase";
 import { Goal } from "@/types/Goal";
 import { auth } from "@/firebase";
-import { addDoc, collection, getDocs } from "firebase/firestore";
+import { addDoc, collection, doc, getDocs, updateDoc } from "firebase/firestore";
 
 export const goalRef = collection(db,"goal")
 
@@ -29,10 +29,34 @@ export const getAllGoals = async () => {
         return querySnapshot.docs.map((doc) => ({
             ...doc.data(),
             id: doc.id
-            
+
         })) as Goal[];
     } catch (e) {
         console.error("Error getting documents: ", e);
         return [];
     }
+}
+
+
+// Update an existing goal
+export const updateGoal = async (goalId: string, updates: Partial<Goal>) => {
+  try {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      console.error("User not authenticated");
+      throw new Error("User not authenticated");
+    }
+    
+    const goalDoc = doc(db, "goal", goalId);
+    await updateDoc(goalDoc, {
+      ...updates,
+      updatedAt: new Date()
+    });
+    
+    console.log("Document updated with ID: ", goalId);
+    return goalId;
+  } catch (e) {
+    console.error("Error updating document: ", e);
+    throw e;
+  }
 }
