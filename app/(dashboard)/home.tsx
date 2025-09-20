@@ -54,6 +54,7 @@ const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   );
 };
 
+
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();

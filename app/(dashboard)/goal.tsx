@@ -288,7 +288,7 @@ const GoalScreen: React.FC<GoalScreenProps> = ({ navigation }) => {
 
               <View style={tw`flex-row justify-end gap-2`}>
   <TouchableOpacity
-    style={tw`bg-gray-400 py-1.5 px-3 rounded-lg mr-2`}
+    style={tw`bg-gray-400 py-1.5 px-3 rounded-lg mr-3 `}
     onPress={() => {
       setAddModalVisible(false);
       setNewTitle("");
