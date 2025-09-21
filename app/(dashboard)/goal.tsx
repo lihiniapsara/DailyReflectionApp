@@ -8,12 +8,13 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  FlatList
+  FlatList,
+  ActivityIndicator
 } from "react-native";
 import tw from "tailwind-react-native-classnames";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { auth, db } from "@/firebase";
-import { createGoal, getAllGoals } from "@/services/goalService";
+import { createGoal, getAllGoals, updateGoal } from "@/services/goalService";
 
 const GoalScreen = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -21,7 +22,10 @@ const GoalScreen = () => {
   const [newText, setNewText] = useState("");
   const [newDate, setNewDate] = useState("");
   const [goals, setGoals] = useState([]);
+  const [filteredGoals, setFilteredGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingGoalId, setUpdatingGoalId] = useState(null);
+  const [filter, setFilter] = useState("all"); // "all", "active", "completed"
 
   const formatDate = (date) => {
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -45,10 +49,7 @@ const GoalScreen = () => {
           return;
         }
 
-        // Use the getAllGoals function from goalService
         const allGoals = await getAllGoals();
-        
-        // Filter goals for the current user
         const userGoals = allGoals.filter(goal => goal.userId === userId);
         
         setGoals(userGoals);
@@ -62,6 +63,19 @@ const GoalScreen = () => {
 
     fetchGoals();
   }, []);
+
+  useEffect(() => {
+    // Filter goals based on selected filter
+    let filtered = goals;
+    
+    if (filter === "active") {
+      filtered = goals.filter(goal => !goal.completed);
+    } else if (filter === "completed") {
+      filtered = goals.filter(goal => goal.completed);
+    }
+    
+    setFilteredGoals(filtered);
+  }, [goals, filter]);
 
   const handleAddGoal = async () => {
     if (newTitle.trim() && newText.trim() && newDate.trim()) {
@@ -77,6 +91,7 @@ const GoalScreen = () => {
           text: newText.trim(),
           date: newDate.trim(),
           userId,
+          completed: false,
           createdAt: new Date().toISOString(),
         };
 
@@ -101,21 +116,66 @@ const GoalScreen = () => {
     }
   };
 
+  const handleToggleComplete = async (goalId, currentStatus) => {
+    try {
+      setUpdatingGoalId(goalId);
+      await updateGoal(goalId, { completed: !currentStatus });
+      
+      // Update local state
+      const updatedGoals = goals.map(goal => 
+        goal.id === goalId ? { ...goal, completed: !currentStatus } : goal
+      );
+      
+      setGoals(updatedGoals);
+      setUpdatingGoalId(null);
+    } catch (error) {
+      console.error("Error updating goal: ", error);
+      Alert.alert("Error", "Failed to update goal");
+      setUpdatingGoalId(null);
+    }
+  };
+
   const renderGoalItem = ({ item }) => (
     <View style={tw`bg-white p-4 rounded-lg mb-3 shadow-sm border border-gray-100`}>
       <View style={tw`flex-row justify-between items-start mb-2`}>
-        <Text style={tw`text-lg font-bold text-purple-800 flex-1 mr-2`} numberOfLines={1}>
+        <Text 
+          style={[
+            tw`text-lg font-bold flex-1 mr-2`,
+            item.completed ? tw`text-gray-400 line-through` : tw`text-purple-800`
+          ]} 
+          numberOfLines={1}
+        >
           {item.title}
         </Text>
+        {updatingGoalId === item.id ? (
+          <ActivityIndicator size="small" color="#8B5CF6" />
+        ) : (
+          <TouchableOpacity onPress={() => handleToggleComplete(item.id, item.completed)}>
+            <Icon 
+              name={item.completed ? "check-circle" : "radio-button-unchecked"} 
+              size={24} 
+              color={item.completed ? "#10B981" : "#9CA3AF"} 
+            />
+          </TouchableOpacity>
+        )}
       </View>
-      <Text style={tw`text-gray-700 mb-3`}>{item.text}</Text>
+      <Text style={item.completed ? tw`text-gray-400 line-through mb-3` : tw`text-gray-700 mb-3`}>
+        {item.text}
+      </Text>
       <View style={tw`flex-row justify-between items-center`}>
         <View style={tw`flex-row items-center`}>
           <Icon name="calendar-today" size={14} color="#6b7280" style={tw`mr-1`} />
-          <Text style={tw`text-gray-500 text-xs`}>{item.date}</Text>
+          <Text style={item.completed ? tw`text-gray-400 text-xs` : tw`text-gray-500 text-xs`}>
+            {item.date}
+          </Text>
         </View>
-        <View style={tw`bg-purple-100 px-2 py-1 rounded-full`}>
-          <Text style={tw`text-purple-800 text-xs font-medium`}>Active</Text>
+        <View style={[
+          tw`px-2 py-1 rounded-full`,
+          item.completed ? tw`bg-green-100` : tw`bg-purple-100`
+        ]}>
+          <Text style={item.completed ? tw`text-green-800 text-xs font-medium` : tw`text-purple-800 text-xs font-medium`}>
+            {item.completed ? "Completed" : "Active"}
+          </Text>
         </View>
       </View>
     </View>
@@ -124,9 +184,13 @@ const GoalScreen = () => {
   const renderEmptyState = () => (
     <View style={tw`flex-1 justify-center items-center mt-10`}>
       <Icon name="emoji-objectives" size={60} color="#d1d5db" />
-      <Text style={tw`text-gray-400 text-lg font-medium mt-4`}>No goals yet</Text>
+      <Text style={tw`text-gray-400 text-lg font-medium mt-4`}>
+        {filter === "completed" ? "No completed goals" : 
+         filter === "active" ? "No active goals" : "No goals yet"}
+      </Text>
       <Text style={tw`text-gray-400 text-center mt-2 px-10`}>
-        Start by adding your first goal to track your progress
+        {filter === "all" ? "Start by adding your first goal to track your progress" :
+         "Try changing your filters to see more goals"}
       </Text>
     </View>
   );
@@ -153,13 +217,51 @@ const GoalScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Filter buttons */}
+        <View style={tw`flex-row justify-center mb-4`}>
+          <TouchableOpacity
+            style={[
+              tw`px-4 py-2 rounded-l-lg border border-purple-600`,
+              filter === "all" ? tw`bg-purple-600` : tw`bg-white`
+            ]}
+            onPress={() => setFilter("all")}
+          >
+            <Text style={filter === "all" ? tw`text-white` : tw`text-purple-600`}>
+              All
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              tw`px-4 py-2 border-t border-b border-purple-600`,
+              filter === "active" ? tw`bg-purple-600` : tw`bg-white`
+            ]}
+            onPress={() => setFilter("active")}
+          >
+            <Text style={filter === "active" ? tw`text-white` : tw`text-purple-600`}>
+              Active
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              tw`px-4 py-2 rounded-r-lg border border-purple-600`,
+              filter === "completed" ? tw`bg-purple-600` : tw`bg-white`
+            ]}
+            onPress={() => setFilter("completed")}
+          >
+            <Text style={filter === "completed" ? tw`text-white` : tw`text-purple-600`}>
+              Completed
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
           <View style={tw`flex-1 justify-center items-center`}>
-            <Text style={tw`text-gray-500`}>Loading goals...</Text>
+            <ActivityIndicator size="large" color="#8B5CF6" />
+            <Text style={tw`text-gray-500 mt-2`}>Loading goals...</Text>
           </View>
         ) : (
           <FlatList
-            data={goals}
+            data={filteredGoals}
             renderItem={renderGoalItem}
             keyExtractor={(item) => item.id}
             ListEmptyComponent={renderEmptyState}

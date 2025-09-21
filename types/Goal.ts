@@ -3,4 +3,7 @@ export interface Goal {
     title: string;
     text: string;
     date: string;
+    completed: boolean;
+    userId: string;
+    createdAt: string;
 }

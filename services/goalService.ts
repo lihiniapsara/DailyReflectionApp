@@ -5,11 +5,15 @@ import { addDoc, collection, doc, getDocs, updateDoc } from "firebase/firestore"
 
 export const goalRef = collection(db,"goal")
 
-export const createGoal = async (goal:Goal) => {
+export const createGoal = async (goal: Goal) => {
     try {
         const userId = auth.currentUser?.uid;
         if (userId) {
-            const docRef = await addDoc(goalRef, { ...goal, userId });
+            const docRef = await addDoc(goalRef, { 
+                ...goal, 
+                userId,
+                completed: false // Ensure completed status is always set
+            });
             console.log("Document written with ID: ", docRef.id);
             return docRef;
         } else {
@@ -29,14 +33,12 @@ export const getAllGoals = async () => {
         return querySnapshot.docs.map((doc) => ({
             ...doc.data(),
             id: doc.id
-
         })) as Goal[];
     } catch (e) {
         console.error("Error getting documents: ", e);
         return [];
     }
 }
-
 
 // Update an existing goal
 export const updateGoal = async (goalId: string, updates: Partial<Goal>) => {
@@ -50,7 +52,7 @@ export const updateGoal = async (goalId: string, updates: Partial<Goal>) => {
     const goalDoc = doc(db, "goal", goalId);
     await updateDoc(goalDoc, {
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString()
     });
     
     console.log("Document updated with ID: ", goalId);
