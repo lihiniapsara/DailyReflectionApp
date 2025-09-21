@@ -9,12 +9,14 @@ import {
   Modal,
   Animated,
   Easing,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { JournalEntry } from "@/types/JournalEntry";
+import { Goal } from "@/types/Goal"; // You'll need to create this type
 import { auth, db } from "@/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 // Mood options with enhanced data
 const moodOptions: {
@@ -93,14 +95,42 @@ const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   );
 };
 
+// Goal item component
+const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
+  const progressPercentage = goal.progress ? (goal.progress / goal.target) * 100 : 0;
+  
+  return (
+    <View className="flex-row items-center mb-3">
+      <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+        <Ionicons name="trophy-outline" size={20} color="#3B82F6" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-base font-medium text-gray-900">
+          {goal.title}
+        </Text>
+        <Text className="text-sm text-gray-500">
+          {goal.progress || 0}/{goal.target} {goal.unit || "completed"}
+        </Text>
+      </View>
+      <View className="bg-blue-100 px-2 py-1 rounded-full">
+        <Text className="text-xs font-medium text-blue-800">
+          {Math.min(100, Math.round(progressPercentage))}%
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [moodDescription, setMoodDescription] = useState("");
   const [selectedMoodData, setSelectedMoodData] = useState<{label: string; emoji: string} | null>(null);
+  const [loadingGoals, setLoadingGoals] = useState(true);
   const scaleAnim = new Animated.Value(0);
 
   // Calculate mood item width based on screen size
@@ -124,6 +154,33 @@ const HomeScreen: React.FC = () => {
         setJournal(allJournals);
       }
     );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch goals from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const q = query(
+      collection(db, "goal"),
+      where("userId", "==", auth.currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const allGoals: Goal[] = [];
+      querySnapshot.forEach((doc) => {
+        allGoals.push({
+          id: doc.id,
+          ...doc.data(),
+        } as Goal);
+      });
+      setGoals(allGoals);
+      setLoadingGoals(false);
+    }, (error) => {
+      console.error("Error fetching goals:", error);
+      setLoadingGoals(false);
+    });
 
     return () => unsubscribe();
   }, []);
@@ -319,7 +376,7 @@ const HomeScreen: React.FC = () => {
               Monthly Goals
             </Text>
             <TouchableOpacity
-              onPress={() => router.push("/goals")}
+              onPress={() => router.push("/goal")}
               accessibilityLabel="View all goals"
               accessibilityRole="button"
             >
@@ -330,61 +387,37 @@ const HomeScreen: React.FC = () => {
           </View>
 
           <View className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <View className="flex-row items-center mb-3">
-              <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
-                <Ionicons name="trophy-outline" size={20} color="#3B82F6" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-medium text-gray-900">
-                  Fitness Goal
-                </Text>
-                <Text className="text-sm text-gray-500">
-                  15/30 days completed
-                </Text>
-              </View>
-              <View className="bg-blue-100 px-2 py-1 rounded-full">
-                <Text className="text-xs font-medium text-blue-800">50%</Text>
-              </View>
-            </View>
-
-            <View className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <View
-                className="bg-blue-500 h-2 rounded-full"
-                style={{ width: "50%" }}
-              ></View>
-            </View>
-
-            <View className="flex-row items-center mb-3">
-              <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
-                <Ionicons name="book-outline" size={20} color="#10B981" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-medium text-gray-900">
-                  Reading Challenge
-                </Text>
-                <Text className="text-sm text-gray-500">3/5 books read</Text>
-              </View>
-              <View className="bg-green-100 px-2 py-1 rounded-full">
-                <Text className="text-xs font-medium text-green-800">60%</Text>
-              </View>
-            </View>
-
-            <View className="w-full bg-gray-200 rounded-full h-2">
-              <View
-                className="bg-green-500 h-2 rounded-full"
-                style={{ width: "60%" }}
-              ></View>
-            </View>
+            {loadingGoals ? (
+              <ActivityIndicator size="small" color="#8B5CF6" />
+            ) : goals.length > 0 ? (
+              <>
+                {goals.slice(0, 2).map((goal) => (
+                  <React.Fragment key={goal.id}>
+                    <GoalItem goal={goal} />
+                    <View className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                      <View
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{ width: `${Math.min(100, (goal.progress || 0) / goal.target * 100)}%` }}
+                      ></View>
+                    </View>
+                  </React.Fragment>
+                ))}
+              </>
+            ) : (
+              <Text className="text-gray-500 text-center py-3">
+                No goals set yet. Add your first goal to track progress.
+              </Text>
+            )}
 
             <TouchableOpacity
               className="flex-row items-center justify-center mt-4 pt-3 border-t border-gray-100"
-              onPress={() => router.push("/goals")}
+              onPress={() => router.push("/goal")}
               accessibilityLabel="Add new goal"
               accessibilityRole="button"
             >
               <Ionicons name="add-circle-outline" size={18} color="#7C3AED" />
               <Text className="text-purple-600 text-sm font-medium ml-1">
-                Add New Goal
+                {goals.length > 0 ? "Add New Goal" : "Create Your First Goal"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -402,13 +435,10 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity
               className="w-full bg-purple-600 py-3 rounded-lg"
               onPress={() => {
-                // Navigate to journal creation with prompt parameter
+                // Navigate to journal tab with prompt parameter
                 router.push({
-                  pathname: "/journal/create",
-                  params: { 
-                    prompt: "What is one thing you're grateful for today?",
-                    title: "Daily Gratitude"
-                  }
+                  pathname: "/journal",
+                  params: { prompt: "What is one thing you're grateful for today?" }
                 });
               }}
               accessibilityLabel="Write about daily prompt"
@@ -453,7 +483,7 @@ const HomeScreen: React.FC = () => {
               </Text>
               <TouchableOpacity
                 className="w-full bg-purple-600 py-3 rounded-lg"
-                onPress={() => router.push("/journal/create")}
+                onPress={() => router.push("/journal")}
               >
                 <Text className="text-base font-medium text-white text-center">
                   Start Journaling
