@@ -15,6 +15,7 @@ import { useRouter, Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from '@/context/ThemeContext';
+import { useThemeColors } from '@/hooks/useThemeColors'; // Import the theme hook
 
 // Type definitions for options
 interface SettingOption {
@@ -55,6 +56,23 @@ const SettingsScreen: React.FC = () => {
   const [reminderTime, setReminderTime] = useState("9:00 PM");
   const [passcodeEnabled, setPasscodeEnabled] = useState(false);
   const [appVersion] = useState("1.2.3");
+  
+  // Use theme colors
+  const {
+    isDark,
+    backgroundClass,
+    textClass,
+    textSecondaryClass,
+    cardClass,
+    borderClass,
+    inputClass,
+    buttonClass,
+    buttonTextClass,
+    headerClass,
+    headerTextClass,
+    modalClass,
+    modalTextClass,
+  } = useThemeColors();
 
   // Load saved settings
   useEffect(() => {
@@ -364,20 +382,24 @@ const SettingsScreen: React.FC = () => {
     }) => {
       return (
         <TouchableOpacity
-          className="flex-row justify-between items-center p-4 border-b border-gray-100 active:bg-gray-50"
+          className={`flex-row justify-between items-center p-4 border-b active:bg-gray-50 ${borderClass}`}
           onPress={() => onPress(option)}
           accessibilityLabel={option.title}
           accessibilityRole="button"
         >
           <View className="flex-row items-center flex-1">
             <View className="w-8 items-center">
-              <Ionicons name={option.icon} size={20} color="#4B5563" />
+              <Ionicons 
+                name={option.icon} 
+                size={20} 
+                color={isDark ? "#9CA3AF" : "#4B5563"} 
+              />
             </View>
-            <Text className="text-base text-gray-900 ml-3 flex-1">{option.title}</Text>
+            <Text className={`text-base ml-3 flex-1 ${textClass}`}>{option.title}</Text>
           </View>
           <View className="flex-row items-center">
             {option.extraText && (
-              <Text className="text-sm text-gray-500 mr-3">{option.extraText}</Text>
+              <Text className={`text-sm mr-3 ${textSecondaryClass}`}>{option.extraText}</Text>
             )}
             {option.toggle !== undefined ? (
               <Switch
@@ -387,7 +409,11 @@ const SettingsScreen: React.FC = () => {
                 thumbColor={option.toggle ? "#FFFFFF" : "#FFFFFF"}
               />
             ) : (
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              <Ionicons 
+                name="chevron-forward" 
+                size={20} 
+                color={isDark ? "#9CA3AF" : "#9CA3AF"} 
+              />
             )}
           </View>
         </TouchableOpacity>
@@ -405,10 +431,10 @@ const SettingsScreen: React.FC = () => {
 
   const renderSection = ({ item }: { item: Section }) => (
     <View className="mb-4">
-      <Text className="text-xs font-medium text-gray-500 uppercase px-4 py-2">
+      <Text className={`text-xs font-medium uppercase px-4 py-2 ${textSecondaryClass}`}>
         {item.title}
       </Text>
-      <View className="bg-white rounded-lg overflow-hidden">
+      <View className={`rounded-lg overflow-hidden ${cardClass}`}>
         <FlatList
           data={item.options}
           keyExtractor={(option) => option.id}
@@ -422,38 +448,39 @@ const SettingsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 ${backgroundClass}`}>
+      <View className={`flex-1 ${backgroundClass}`}>
         <Stack.Screen 
           options={{ 
             title: "Settings",
             headerStyle: {
-              backgroundColor: "#f9fafb",
+              backgroundColor: isDark ? "#0f102fff" : "#f9fafb",
             },
+            headerTintColor: isDark ? "#FFFFFF" : "#000000",
             headerShadowVisible: false,
           }} 
         />
         
         {/* Header */}
-        <View className="bg-white px-6 py-6 border-b border-gray-200">
-          <Text className="text-3xl font-bold text-gray-900">Settings</Text>
-          <Text className="text-gray-600 mt-1">Customize your journal experience</Text>
+        <View className={`px-6 py-6 border-b ${headerClass} ${borderClass}`}>
+          <Text className={`text-3xl font-bold ${headerTextClass}`}>Settings</Text>
+          <Text className={`mt-1 ${textSecondaryClass}`}>Customize your journal experience</Text>
         </View>
 
         {/* Search Bar */}
-        <View className="bg-white mx-4 my-4 rounded-xl border border-gray-200 px-4 py-3 flex-row items-center shadow-sm">
-          <Ionicons name="search" size={20} color="#9CA3AF" />
+        <View className={`mx-4 my-4 rounded-xl border px-4 py-3 flex-row items-center shadow-sm ${inputClass}`}>
+          <Ionicons name="search" size={20} color={isDark ? "#9CA3AF" : "#9CA3AF"} />
           <TextInput
-            className="flex-1 py-0 text-base text-gray-900 ml-3"
+            className={`flex-1 py-0 text-base ml-3 ${textClass}`}
             placeholder="Search settings"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={isDark ? "#9CA3AF" : "#9CA3AF"}
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessibilityLabel="Search settings input"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={20} color={isDark ? "#9CA3AF" : "#9CA3AF"} />
             </TouchableOpacity>
           )}
         </View>
@@ -468,13 +495,11 @@ const SettingsScreen: React.FC = () => {
           contentContainerStyle={{ paddingBottom: 32 }}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center py-10">
-              <Ionicons name="search" size={40} color="#9CA3AF" />
-              <Text className="text-gray-500 mt-2 text-center">No settings found for "{searchQuery}"</Text>
+              <Ionicons name="search" size={40} color={isDark ? "#9CA3AF" : "#9CA3AF"} />
+              <Text className={`mt-2 text-center ${textSecondaryClass}`}>No settings found for "{searchQuery}"</Text>
             </View>
           }
         />
-
-
       </View>
     </SafeAreaView>
   );
