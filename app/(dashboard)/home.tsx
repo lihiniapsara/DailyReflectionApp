@@ -5,8 +5,10 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  Dimensions,
   useWindowDimensions,
+  Modal,
+  Animated,
+  Easing,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
@@ -14,18 +16,55 @@ import { JournalEntry } from "@/types/JournalEntry";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 
-// Mood options
+// Mood options with enhanced data
 const moodOptions: {
   label: string;
   value: number;
   emoji: string;
   color: string;
+  bgColor: string;
+  description: string;
 }[] = [
-  { label: "Amazing", value: 5, emoji: "😊", color: "bg-green-500" },
-  { label: "Good", value: 4, emoji: "🙂", color: "bg-blue-500" },
-  { label: "Okay", value: 3, emoji: "😐", color: "bg-yellow-500" },
-  { label: "Not Great", value: 2, emoji: "😞", color: "bg-orange-500" },
-  { label: "Awful", value: 1, emoji: "😢", color: "bg-red-500" },
+  { 
+    label: "Amazing", 
+    value: 5, 
+    emoji: "😊", 
+    color: "#10B981", 
+    bgColor: "bg-green-100",
+    description: "Feeling fantastic and energetic" 
+  },
+  { 
+    label: "Good", 
+    value: 4, 
+    emoji: "🙂", 
+    color: "#3B82F6", 
+    bgColor: "bg-blue-100",
+    description: "Having a positive day" 
+  },
+  { 
+    label: "Okay", 
+    value: 3, 
+    emoji: "😐", 
+    color: "#F59E0B", 
+    bgColor: "bg-yellow-100",
+    description: "Neutral, not bad but not great" 
+  },
+  { 
+    label: "Not Great", 
+    value: 2, 
+    emoji: "😞", 
+    color: "#F97316", 
+    bgColor: "bg-orange-100",
+    description: "Things could be better" 
+  },
+  { 
+    label: "Awful", 
+    value: 1, 
+    emoji: "😢", 
+    color: "#EF4444", 
+    bgColor: "bg-red-100",
+    description: "Having a really tough time" 
+  },
 ];
 
 // Journal item component
@@ -54,12 +93,15 @@ const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   );
 };
 
-
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [moodDescription, setMoodDescription] = useState("");
+  const [selectedMoodData, setSelectedMoodData] = useState<{label: string; emoji: string} | null>(null);
+  const scaleAnim = new Animated.Value(0);
 
   // Calculate mood item width based on screen size
   const moodItemWidth = width < 400 ? (width - 48) / 3.5 : 100;
@@ -85,6 +127,81 @@ const HomeScreen: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
+
+  const handleMoodSelection = (moodValue: number) => {
+    setSelectedMood(moodValue);
+    
+    // Find the selected mood description
+    const selected = moodOptions.find(mood => mood.value === moodValue);
+    if (selected) {
+      setMoodDescription(selected.description);
+      setSelectedMoodData({
+        label: selected.label,
+        emoji: selected.emoji
+      });
+    }
+    
+    // Show the modal only if the mood is negative (value 1 or 2)
+    if (moodValue <= 2) {
+      setShowMoodModal(true);
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const closeMoodModal = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0,
+      duration: 200,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setShowMoodModal(false);
+    });
+  };
+
+  const confirmMoodSelection = () => {
+    if (selectedMoodData) {
+      // Navigate to journal creation with mood data
+      router.push({
+        pathname: "/journal",
+        params: { 
+          mood: selectedMoodData.label,
+          moodEmoji: selectedMoodData.emoji,
+          prompt: `How did your ${selectedMoodData.label.toLowerCase()} day make you feel?`
+        }
+      });
+    }
+    closeMoodModal();
+  };
+
+  const handleJournalNow = () => {
+    if (selectedMoodData) {
+      // Navigate directly to journal creation
+      router.push({
+        pathname: "/journal",
+        params: { 
+          mood: selectedMoodData.label,
+          moodEmoji: selectedMoodData.emoji,
+          prompt: `How did your ${selectedMoodData.label.toLowerCase()} day make you feel?`
+        }
+      });
+    }
+  };
+
+  const getMoodEmoji = () => {
+    const selected = moodOptions.find(mood => mood.value === selectedMood);
+    return selected ? selected.emoji : "";
+  };
+
+  const getMoodColor = () => {
+    const selected = moodOptions.find(mood => mood.value === selectedMood);
+    return selected ? selected.color : "#6B7280";
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -118,47 +235,81 @@ const HomeScreen: React.FC = () => {
       >
         {/* Mood Selection */}
         <View className="mb-6">
-          <Text className="text-lg font-bold text-gray-900 mb-4">
-            How are you feeling today?
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-3"
-            contentContainerStyle={{ paddingHorizontal: 4 }}
-          >
-            {moodOptions.map((mood) => (
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-lg font-bold text-gray-900">
+              How are you feeling today?
+            </Text>
+            {selectedMood && (
               <TouchableOpacity
-                key={mood.value}
-                style={{
-                  width: moodItemWidth,
-                  height: moodItemHeight,
-                  marginHorizontal: 6,
-                }}
-                className={`flex-col items-center justify-center rounded-xl p-3
-                  ${
-                    selectedMood === mood.value
-                      ? `${mood.color}`
-                      : "bg-white border border-gray-200"
-                  }`}
                 onPress={() => {
-                  setSelectedMood(mood.value);
-                  router.push(`/mood?mood=${mood.label}`);
+                  setSelectedMood(null);
+                  setSelectedMoodData(null);
                 }}
-                accessibilityLabel={`Select ${mood.label} mood`}
-                accessibilityRole="button"
+                className="px-3 py-1 bg-gray-100 rounded-full"
               >
-                <Text className="text-3xl mb-1">{mood.emoji}</Text>
-                <Text
-                  className={`text-xs font-semibold text-center
-                    ${selectedMood === mood.value ? "text-white" : "text-gray-800"}`}
-                  numberOfLines={1}
-                >
-                  {mood.label}
-                </Text>
+                <Text className="text-xs text-gray-600">Change</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          </View>
+          
+          {selectedMood ? (
+            <View className={`p-4 rounded-xl mb-3 flex-row items-center justify-between`}
+              style={{ backgroundColor: `${getMoodColor()}20` }} // 20 is for 12% opacity
+            >
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: getMoodColor() }}
+                >
+                  <Text className="text-2xl">{getMoodEmoji()}</Text>
+                </View>
+                <View>
+                  <Text className="text-lg font-semibold text-gray-900">
+                    {moodOptions.find(m => m.value === selectedMood)?.label}
+                  </Text>
+                  <Text className="text-sm text-gray-600">
+                    {moodDescription}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={handleJournalNow}
+                className="bg-purple-600 px-4 py-2 rounded-lg"
+              >
+                <Text className="text-white font-medium">Journal Now</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-3"
+              contentContainerStyle={{ paddingHorizontal: 4 }}
+            >
+              {moodOptions.map((mood) => (
+                <TouchableOpacity
+                  key={mood.value}
+                  style={{
+                    width: moodItemWidth,
+                    height: moodItemHeight,
+                    marginHorizontal: 6,
+                  }}
+                  className={`flex-col items-center justify-center rounded-xl p-3
+                    ${mood.bgColor} border border-gray-100`}
+                  onPress={() => handleMoodSelection(mood.value)}
+                  accessibilityLabel={`Select ${mood.label} mood`}
+                  accessibilityRole="button"
+                >
+                  <Text className="text-3xl mb-1">{mood.emoji}</Text>
+                  <Text
+                    className="text-xs font-semibold text-center text-gray-800"
+                    numberOfLines={1}
+                  >
+                    {mood.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Monthly Goals */}
@@ -240,81 +391,129 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* Daily Prompt */}
-{/* Daily Prompt */}
-<View className="mb-6">
-  <Text className="text-lg font-semibold text-gray-900 mb-4">
-    Daily Prompt
-  </Text>
-  <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-    <Text className="text-base text-gray-700 italic mb-4">
-      "What is one thing you're grateful for today?"
-    </Text>
-    <TouchableOpacity
-      className="w-full bg-purple-600 py-3 rounded-lg"
-      onPress={() => {
-        // Navigate to journal tab with prompt parameter
-        router.push({
-          pathname: "/journal",
-          params: { prompt: "What is one thing you're grateful for today?" }
-        });
-      }}
-      accessibilityLabel="Write about daily prompt"
-      accessibilityRole="button"
-    >
-      <Text className="text-base font-medium text-white text-center">
-        Write about it
-      </Text>
-    </TouchableOpacity>
-  </View>
-</View>
+        <View className="mb-6">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">
+            Daily Prompt
+          </Text>
+          <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <Text className="text-base text-gray-700 italic mb-4">
+              "What is one thing you're grateful for today?"
+            </Text>
+            <TouchableOpacity
+              className="w-full bg-purple-600 py-3 rounded-lg"
+              onPress={() => {
+                // Navigate to journal creation with prompt parameter
+                router.push({
+                  pathname: "/journal/create",
+                  params: { 
+                    prompt: "What is one thing you're grateful for today?",
+                    title: "Daily Gratitude"
+                  }
+                });
+              }}
+              accessibilityLabel="Write about daily prompt"
+              accessibilityRole="button"
+            >
+              <Text className="text-base font-medium text-white text-center">
+                Write about it
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Recent Journal Entries */}
-    <View className="mb-6">
-  <View className="flex-row justify-between items-center mb-4">
-    <Text className="text-lg font-semibold text-gray-900">
-      Recent Entries
-    </Text>
-    {journal.length > 0 && (
-      <TouchableOpacity
-        onPress={() => router.push("/journal")}
-        accessibilityLabel="View all journal entries"
-        accessibilityRole="button"
-      >
-        <Text className="text-purple-600 text-sm font-medium">
-          View All
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
+        <View className="mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-lg font-semibold text-gray-900">
+              Recent Entries
+            </Text>
+            {journal.length > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push("/journal")}
+                accessibilityLabel="View all journal entries"
+                accessibilityRole="button"
+              >
+                <Text className="text-purple-600 text-sm font-medium">
+                  View All
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-  {journal.length > 0 ? (
-    <>
-      {journal.slice(0, 3).map((entry) => (
-        <TouchableOpacity
-          key={entry.id}
-          onPress={() => router.push(`/journal?entryId=${entry.id}`)}
-        >
-          <JournalEntryItem entry={entry} />
-        </TouchableOpacity>
-      ))}
-    </>
-  ) : (
-    <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-      <Text className="text-base text-gray-500 text-center mb-4">
-        No journal entries yet. Start by writing your first entry!
-      </Text>
-      <TouchableOpacity
-        className="w-full bg-purple-600 py-3 rounded-lg"
-        onPress={() => router.push("/journal")}
-      >
-        <Text className="text-base font-medium text-white text-center">
-          Start Journaling
-        </Text>
-      </TouchableOpacity>
-    </View>
-  )}
-</View>
+          {journal.length > 0 ? (
+            <>
+              {journal.slice(0, 3).map((entry) => (
+                <JournalEntryItem key={entry.id} entry={entry} />
+              ))}
+            </>
+          ) : (
+            <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <Text className="text-base text-gray-500 text-center mb-4">
+                No journal entries yet. Start by writing your first entry!
+              </Text>
+              <TouchableOpacity
+                className="w-full bg-purple-600 py-3 rounded-lg"
+                onPress={() => router.push("/journal/create")}
+              >
+                <Text className="text-base font-medium text-white text-center">
+                  Start Journaling
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Mood Selection Modal - Only shown for negative moods */}
+      <Modal
+        visible={showMoodModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeMoodModal}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50 p-5">
+          <Animated.View 
+            style={{ 
+              transform: [{ scale: scaleAnim }],
+            }}
+            className="w-full max-w-md bg-white rounded-xl p-6"
+          >
+            <View className="items-center mb-5">
+              <View className="w-20 h-20 rounded-full items-center justify-center mb-3"
+                style={{ backgroundColor: getMoodColor() }}
+              >
+                <Text className="text-4xl">{getMoodEmoji()}</Text>
+              </View>
+              <Text className="text-2xl font-bold text-gray-900 mb-1">
+                {moodOptions.find(m => m.value === selectedMood)?.label}
+              </Text>
+              <Text className="text-gray-600 text-center">
+                {moodDescription}
+              </Text>
+            </View>
+            
+            <Text className="text-gray-700 mb-4 text-center">
+              Would you like to journal about this feeling?
+            </Text>
+            
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                onPress={closeMoodModal}
+                className="px-5 py-3 rounded-lg bg-gray-100 flex-1 mr-2"
+              >
+                <Text className="text-center font-medium text-gray-700">Not Now</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={confirmMoodSelection}
+                className="px-5 py-3 rounded-lg bg-purple-600 flex-1 ml-2"
+              >
+                <Text className="text-center font-medium text-white">Journal Now</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
