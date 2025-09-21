@@ -9,15 +9,18 @@ import ThemeWrapper from "@/components/ThemeWrapper"
 
 const RootLayout = () => {
   return (
-    <ThemeProvider>
-      <ThemeWrapper>
+    
         <LoaderProvider>
           <AuthProvider>
-            <Slot />
+            <ThemeProvider>
+              <ThemeWrapper>
+
+                <Slot />
+              </ThemeWrapper>
+            </ThemeProvider>
           </AuthProvider>
         </LoaderProvider>
-      </ThemeWrapper>
-    </ThemeProvider>
+      
   )
 }
 
