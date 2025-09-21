@@ -36,7 +36,6 @@ interface Section {
 const themes = [
   { id: "light", name: "Light" },
   { id: "dark", name: "Dark" },
-  { id: "system", name: "System Default" },
 ];
 
 // Reminder times

@@ -23,6 +23,7 @@ import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import * as Notifications from "expo-notifications";
+import { useThemeColors } from "@/hooks/useThemeColors"; // Import the theme hook
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,6 +48,24 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [showReminder, setShowReminder] = useState(false);
   const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
+  
+  // Use theme colors
+  const {
+    backgroundClass,
+    textClass,
+    textSecondaryClass,
+    cardClass,
+    borderClass,
+    inputClass,
+    buttonClass,
+    buttonTextClass,
+    headerClass,
+    headerTextClass,
+    modalClass,
+    modalTextClass,
+    moodButtonClass,
+    moodButtonTextClass,
+  } = useThemeColors();
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [newEntry, setNewEntry] = useState<JournalEntry>({
@@ -296,8 +315,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-1 bg-gray-50">
+    <SafeAreaView className={`flex-1 ${backgroundClass}`}>
+      <View className={`flex-1 ${backgroundClass}`}>
         <Modal
           animationType="fade"
           transparent={true}
@@ -308,20 +327,22 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             className="flex-1 justify-center items-center bg-black/50"
             style={{ opacity: modalOpacity }}
           >
-            <View className="bg-white rounded-2xl p-6 w-11/12 max-w-md">
-              <Text className="text-xl font-bold text-gray-900 mb-4">
+            <View className={`rounded-2xl p-6 w-11/12 max-w-md ${modalClass}`}>
+              <Text className={`text-xl font-bold mb-4 ${modalTextClass}`}>
                 New Journal Entry
               </Text>
               <TextInput
-                className="border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 bg-gray-50"
+                className={`border rounded-lg p-3 mb-4 ${inputClass}`}
                 placeholder="Title"
+                placeholderTextColor={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#6B7280'}
                 value={newEntry.title}
                 onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
                 accessibilityLabel="Enter journal entry title"
               />
               <TextInput
-                className="border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 bg-gray-50 h-32"
+                className={`border rounded-lg p-3 mb-4 h-32 ${inputClass}`}
                 placeholder="Write your thoughts..."
+                placeholderTextColor={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#6B7280'}
                 value={newEntry.content}
                 onChangeText={(text) =>
                   setNewEntry({ ...newEntry, content: text })
@@ -330,7 +351,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                 accessibilityLabel="Enter journal entry content"
               />
               <TouchableOpacity
-                className="border border-gray-300 rounded-lg p-3 mb-4 bg-gray-50"
+                className={`border rounded-lg p-3 mb-4 ${inputClass}`}
                 onPress={() => {
                   if (Platform.OS === "android") {
                     showDatePickerAndroid();
@@ -341,7 +362,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                 accessibilityLabel="Select journal entry date"
                 accessibilityRole="button"
               >
-                <Text className="text-sm text-gray-600">
+                <Text className={`text-sm ${textSecondaryClass}`}>
                   Date: {newEntry.date}
                 </Text>
               </TouchableOpacity>
@@ -353,7 +374,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   onChange={onDateChange}
                 />
               )}
-              <Text className="text-sm font-semibold text-gray-900 mb-2">
+              <Text className={`text-sm font-semibold mb-2 ${modalTextClass}`}>
                 Select Mood
               </Text>
               <View className="flex-row flex-wrap justify-between mb-4">
@@ -365,9 +386,9 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                     <TouchableOpacity
                       className={`flex-col items-center justify-center w-20 h-20 rounded-xl p-2 mb-2 ${
                         newEntry.mood === mood.value
-                          ? "bg-white border border-gray-200"
-                          : "bg-white border border-gray-200"
-                      }`}
+                          ? "border border-gray-200"
+                          : "border border-gray-200"
+                      } ${moodButtonClass}`}
                       style={
                         newEntry.mood === mood.value
                           ? { backgroundColor: moodColorMap[mood.value] }
@@ -385,7 +406,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                         className={`text-xs font-medium ${
                           newEntry.mood === mood.value
                             ? "text-white"
-                            : "text-gray-800"
+                            : moodButtonTextClass
                         }`}
                       >
                         {mood.label}
@@ -432,8 +453,8 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </View>
           </Animated.View>
         </Modal>
-        <View className="flex-row justify-between items-center bg-white px-4 py-4 border-b border-gray-200">
-          <Text className="text-xl font-semibold text-gray-900">Journal</Text>
+        <View className={`flex-row justify-between items-center px-4 py-4 border-b ${headerClass} ${borderClass}`}>
+          <Text className={`text-xl font-semibold ${headerTextClass}`}>Journal</Text>
         </View>
         <ScrollView className="p-4">
           {showReminder && (
@@ -454,39 +475,39 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </View>
           )}
           <TouchableOpacity
-            className="bg-purple-600 py-3 rounded-lg mb-4"
+            className={`py-3 rounded-lg mb-4 ${buttonClass}`}
             onPress={openModal}
             accessibilityLabel="Add new journal entry"
             accessibilityRole="button"
           >
-            <Text className="text-base font-medium text-white text-center">
+            <Text className={`text-base font-medium text-center ${buttonTextClass}`}>
               + New Journal Entry
             </Text>
           </TouchableOpacity>
           {tempEntries.map((entry) => (
             <TouchableOpacity
               key={entry.id}
-              className="bg-white p-4 rounded-xl border border-gray-200 mb-3"
+              className={`p-4 rounded-xl border mb-3 ${cardClass} ${borderClass}`}
               onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
               accessibilityLabel={`View journal entry: ${entry.title}`}
               accessibilityRole="button"
             >
               <View className="flex-row justify-between mb-2">
-                <Text className="text-sm font-medium text-gray-900">
+                <Text className={`text-sm font-medium ${textClass}`}>
                   {entry.title}
                 </Text>
-                <Text className="text-xs text-gray-500">{entry.date}</Text>
+                <Text className={`text-xs ${textSecondaryClass}`}>{entry.date}</Text>
               </View>
-              <Text className="text-xs text-gray-600 mb-2" numberOfLines={2}>
+              <Text className={`text-xs mb-2 ${textSecondaryClass}`} numberOfLines={2}>
                 {entry.content}
               </Text>
               <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-gray-600">
+                <Text className={`text-xs ${textSecondaryClass}`}>
                   {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
                   {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
                     "Unknown Mood"}
                 </Text>
-                <ChevronRight size={14} color="#9CA3AF" />
+                <ChevronRight size={14} color={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#9CA3AF'} />
               </View>
             </TouchableOpacity>
           ))}
