@@ -7,7 +7,6 @@ const tabs = [
   { label: "Home", name: "home", icon: "home-filled" },
   { label: "Journal", name: "journal", icon: "menu-book" },
   { label: "Goal", name: "goal", icon: "flag" },
-  { label: "Insights", name: "insights", icon: "insights" },
   { label: "Settings", name: "settings", icon: "settings" },
 
 ] as const

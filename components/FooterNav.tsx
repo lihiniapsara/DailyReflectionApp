@@ -29,11 +29,11 @@ const FooterNav: React.FC<FooterNavProps> = ({ activeScreen, setCurrentScreen })
           <Icon
             name={icon}
             size={18}
-            color={activeScreen === screen ? '#007AFF' : '#999'}
+            color={activeScreen === screen ? '#e100ffff' : '#999'}
           />
           <Text style={[
             tw`text-xs mt-1`,
-            { color: activeScreen === screen ? '#007AFF' : '#999' }
+            { color: activeScreen === screen ? '#e100ffff' : '#999' }
           ]}>
             {label}
           </Text>
