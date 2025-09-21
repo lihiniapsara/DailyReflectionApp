@@ -14,9 +14,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { JournalEntry } from "@/types/JournalEntry";
-import { Goal } from "@/types/Goal"; // You'll need to create this type
+import { Goal } from "@/types/Goal";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 // Mood options with enhanced data
 const moodOptions: {
@@ -72,31 +73,34 @@ const moodOptions: {
 // Journal item component
 const JournalEntryItem: React.FC<{ entry: JournalEntry }> = ({ entry }) => {
   const router = useRouter();
+  const colors = useThemeColors(); // Add this
+  
   return (
     <TouchableOpacity
-      className="flex-row items-center justify-between p-4 bg-white border border-gray-200 rounded-lg mb-3 shadow-sm"
+      className={`flex-row items-center justify-between p-4 ${colors.card} border ${colors.border} rounded-lg mb-3 shadow-sm`}
       onPress={() => router.push(`/journal/${entry.id}`)}
       accessibilityLabel={`View journal entry: ${entry.title}`}
       accessibilityRole="button"
     >
       <View className="flex-1 mr-3">
-        <Text className="text-base font-medium text-gray-900" numberOfLines={1}>
+        <Text className={`text-base font-medium ${colors.text}`} numberOfLines={1}>
           {entry.title}
         </Text>
-        <Text className="text-sm text-gray-500 mt-1">
+        <Text className={`text-sm ${colors.textSecondary} mt-1`}>
           {entry.date} • {entry.mood}
         </Text>
-        <Text className="text-sm text-gray-600 mt-1" numberOfLines={2}>
+        <Text className={`text-sm ${colors.textSecondary} mt-1`} numberOfLines={2}>
           {entry.content}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+      <Ionicons name="chevron-forward" size={20} color={colors.isDark ? "#9CA3AF" : "#9CA3AF"} />
     </TouchableOpacity>
   );
 };
 
 // Goal item component
 const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
+  const colors = useThemeColors(); // Add this
   const progressPercentage = goal.progress ? (goal.progress / goal.target) * 100 : 0;
   
   return (
@@ -105,10 +109,10 @@ const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
         <Ionicons name="trophy-outline" size={20} color="#3B82F6" />
       </View>
       <View className="flex-1">
-        <Text className="text-base font-medium text-gray-900">
+        <Text className={`text-base font-medium ${colors.text}`}>
           {goal.title}
         </Text>
-        <Text className="text-sm text-gray-500">
+        <Text className={`text-sm ${colors.textSecondary}`}>
           {goal.progress || 0}/{goal.target} {goal.unit || "completed"}
         </Text>
       </View>
@@ -132,6 +136,7 @@ const HomeScreen: React.FC = () => {
   const [selectedMoodData, setSelectedMoodData] = useState<{label: string; emoji: string} | null>(null);
   const [loadingGoals, setLoadingGoals] = useState(true);
   const scaleAnim = new Animated.Value(0);
+  const colors = useThemeColors(); // Add this
 
   // Calculate mood item width based on screen size
   const moodItemWidth = width < 400 ? (width - 48) / 3.5 : 100;
@@ -261,16 +266,23 @@ const HomeScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <Stack.Screen options={{ title: "Home", headerShown: false }} />
+    <SafeAreaView className={`flex-1 ${colors.background}`}>
+      <Stack.Screen options={{ 
+        title: "Home", 
+        headerShown: false,
+        headerStyle: {
+          backgroundColor: colors.isDark ? '#1f2937' : '#f9fafb',
+        },
+        headerTintColor: colors.isDark ? '#f3f4f6' : '#111827',
+      }} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between bg-white px-5 py-4 border-b border-gray-200">
+      <View className={`flex-row items-center justify-between ${colors.card} px-5 py-4 border-b ${colors.border}`}>
         <View className="flex-1">
-          <Text className="text-xl font-bold text-gray-900">
+          <Text className={`text-xl font-bold ${colors.text}`}>
             Daily Reflection
           </Text>
-          <Text className="text-sm text-gray-500 mt-1">
+          <Text className={`text-sm ${colors.textSecondary} mt-1`}>
             Today, {new Date().toLocaleDateString()}
           </Text>
         </View>
@@ -280,7 +292,7 @@ const HomeScreen: React.FC = () => {
           accessibilityRole="button"
           className="p-2"
         >
-          <Ionicons name="settings-outline" size={24} color="#4B5563" />
+          <Ionicons name="settings-outline" size={24} color={colors.isDark ? "#D1D5DB" : "#4B5563"} />
         </TouchableOpacity>
       </View>
 
@@ -293,7 +305,7 @@ const HomeScreen: React.FC = () => {
         {/* Mood Selection */}
         <View className="mb-6">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold text-gray-900">
+            <Text className={`text-lg font-bold ${colors.text}`}>
               How are you feeling today?
             </Text>
             {selectedMood && (
@@ -320,10 +332,10 @@ const HomeScreen: React.FC = () => {
                   <Text className="text-2xl">{getMoodEmoji()}</Text>
                 </View>
                 <View>
-                  <Text className="text-lg font-semibold text-gray-900">
+                  <Text className={`text-lg font-semibold ${colors.text}`}>
                     {moodOptions.find(m => m.value === selectedMood)?.label}
                   </Text>
-                  <Text className="text-sm text-gray-600">
+                  <Text className={`text-sm ${colors.textSecondary}`}>
                     {moodDescription}
                   </Text>
                 </View>
@@ -351,7 +363,7 @@ const HomeScreen: React.FC = () => {
                     marginHorizontal: 6,
                   }}
                   className={`flex-col items-center justify-center rounded-xl p-3
-                    ${mood.bgColor} border border-gray-100`}
+                    ${mood.bgColor} border ${colors.border}`}
                   onPress={() => handleMoodSelection(mood.value)}
                   accessibilityLabel={`Select ${mood.label} mood`}
                   accessibilityRole="button"
@@ -372,7 +384,7 @@ const HomeScreen: React.FC = () => {
         {/* Monthly Goals */}
         <View className="mb-6">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-gray-900">
+            <Text className={`text-lg font-semibold ${colors.text}`}>
               Monthly Goals
             </Text>
             <TouchableOpacity
@@ -386,7 +398,7 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <View className={`p-4 ${colors.card} border ${colors.border} rounded-lg shadow-sm`}>
             {loadingGoals ? (
               <ActivityIndicator size="small" color="#8B5CF6" />
             ) : goals.length > 0 ? (
@@ -404,7 +416,7 @@ const HomeScreen: React.FC = () => {
                 ))}
               </>
             ) : (
-              <Text className="text-gray-500 text-center py-3">
+              <Text className={`${colors.textSecondary} text-center py-3`}>
                 No goals set yet. Add your first goal to track progress.
               </Text>
             )}
@@ -425,11 +437,11 @@ const HomeScreen: React.FC = () => {
 
         {/* Daily Prompt */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <Text className={`text-lg font-semibold ${colors.text} mb-4`}>
             Daily Prompt
           </Text>
-          <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <Text className="text-base text-gray-700 italic mb-4">
+          <View className={`p-5 ${colors.card} border ${colors.border} rounded-lg shadow-sm`}>
+            <Text className={`text-base ${colors.textSecondary} italic mb-4`}>
               "What is one thing you're grateful for today?"
             </Text>
             <TouchableOpacity
@@ -454,7 +466,7 @@ const HomeScreen: React.FC = () => {
         {/* Recent Journal Entries */}
         <View className="mb-6">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-gray-900">
+            <Text className={`text-lg font-semibold ${colors.text}`}>
               Recent Entries
             </Text>
             {journal.length > 0 && (
@@ -477,8 +489,8 @@ const HomeScreen: React.FC = () => {
               ))}
             </>
           ) : (
-            <View className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <Text className="text-base text-gray-500 text-center mb-4">
+            <View className={`p-5 ${colors.card} border ${colors.border} rounded-lg shadow-sm`}>
+              <Text className={`text-base ${colors.textSecondary} text-center mb-4`}>
                 No journal entries yet. Start by writing your first entry!
               </Text>
               <TouchableOpacity
@@ -506,7 +518,7 @@ const HomeScreen: React.FC = () => {
             style={{ 
               transform: [{ scale: scaleAnim }],
             }}
-            className="w-full max-w-md bg-white rounded-xl p-6"
+            className={`w-full max-w-md ${colors.card} rounded-xl p-6`}
           >
             <View className="items-center mb-5">
               <View className="w-20 h-20 rounded-full items-center justify-center mb-3"
@@ -514,15 +526,15 @@ const HomeScreen: React.FC = () => {
               >
                 <Text className="text-4xl">{getMoodEmoji()}</Text>
               </View>
-              <Text className="text-2xl font-bold text-gray-900 mb-1">
+              <Text className={`text-2xl font-bold ${colors.text} mb-1`}>
                 {moodOptions.find(m => m.value === selectedMood)?.label}
               </Text>
-              <Text className="text-gray-600 text-center">
+              <Text className={`${colors.textSecondary} text-center`}>
                 {moodDescription}
               </Text>
             </View>
             
-            <Text className="text-gray-700 mb-4 text-center">
+            <Text className={`${colors.textSecondary} mb-4 text-center`}>
               Would you like to journal about this feeling?
             </Text>
             

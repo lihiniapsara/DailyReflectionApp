@@ -1,16 +1,23 @@
+// app/_layout.tsx
 import React from "react"
 import "./../global.css"
-import { Slot, Stack } from "expo-router"
+import { Slot } from "expo-router"
 import { AuthProvider } from "../context/AuthContext"
 import { LoaderProvider } from "../context/LoaderContext"
+import { ThemeProvider } from "../context/ThemeContext"
+import ThemeWrapper from "@/components/ThemeWrapper"
 
 const RootLayout = () => {
   return (
-    <LoaderProvider>
-      <AuthProvider>
-        <Slot />
-      </AuthProvider>
-    </LoaderProvider>
+    <ThemeProvider>
+      <ThemeWrapper>
+        <LoaderProvider>
+          <AuthProvider>
+            <Slot />
+          </AuthProvider>
+        </LoaderProvider>
+      </ThemeWrapper>
+    </ThemeProvider>
   )
 }
 

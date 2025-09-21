@@ -1,23 +1,30 @@
-import React, { memo, useState } from "react";
+import React, { memo, useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   FlatList,
+  Switch,
+  Alert,
+  Linking,
+  useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme } from '@/context/ThemeContext';
 
 // Type definitions for options
 interface SettingOption {
   id: string;
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
-  route: string;
+  route?: string;
   toggle?: boolean;
   extraText?: string;
+  action?: () => void;
 }
 
 interface Section {
@@ -25,156 +32,384 @@ interface Section {
   options: SettingOption[];
 }
 
-// Sample data for settings
-const sections: Section[] = [
-  {
-    title: "Appearance",
-    options: [{ id: "theme", title: "Theme", icon: "moon", route: "/theme" }],
-  },
-  {
-    title: "Notifications",
-    options: [
-      {
-        id: "reminders",
-        title: "Reminders",
-        icon: "notifications",
-        route: "/reminders",
-        toggle: true,
-      },
-      {
-        id: "reminder-time",
-        title: "Reminder Time",
-        icon: "time",
-        route: "/reminder-time",
-        extraText: "9:00 PM",
-      },
-    ],
-  },
-  {
-    title: "Data & Security",
-    options: [
-      {
-        id: "data-backup",
-        title: "Data Backup",
-        icon: "cloud",
-        route: "/data-backup",
-      },
-      {
-        id: "passcode-lock",
-        title: "Passcode Lock",
-        icon: "lock-closed",
-        route: "/passcode-lock",
-        toggle: false,
-      },
-      {
-        id: "biometrics",
-        title: "Use Biometrics",
-        icon: "finger-print",
-        route: "/biometrics",
-        toggle: false,
-      },
-    ],
-  },
-  {
-    title: "Help & Support",
-    options: [
-      { id: "faqs", title: "FAQs", icon: "help-circle", route: "/faqs" },
-      {
-        id: "contact-support",
-        title: "Contact Support",
-        icon: "chatbubble",
-        route: "/contact-support",
-      },
-    ],
-  },
-  {
-    title: "About Us",
-    options: [
-      {
-        id: "app-version",
-        title: "App Version",
-        icon: "information-circle",
-        route: "/app-version",
-        extraText: "1.2.3",
-      },
-      {
-        id: "terms-of-service",
-        title: "Terms of Service",
-        icon: "document-text",
-        route: "/terms-of-service",
-      },
-      {
-        id: "privacy-policy",
-        title: "Privacy Policy",
-        icon: "shield",
-        route: "/privacy-policy",
-      },
-    ],
-  },
+// Theme options
+const themes = [
+  { id: "light", name: "Light" },
+  { id: "dark", name: "Dark" },
+  { id: "system", name: "System Default" },
 ];
 
-// Option component
-const SettingOption = memo(
-  ({
-    option,
-    onPress,
-  }: {
-    option: SettingOption;
-    onPress: (route: string) => void;
-  }) => {
-    const [isToggled, setIsToggled] = useState(option.toggle || false);
-
-    return (
-      <TouchableOpacity
-        className="flex-row justify-between items-center p-3 border-b border-gray-100"
-        onPress={() => onPress(option.route)}
-        accessibilityLabel={option.title}
-        accessibilityRole="button"
-      >
-        <View className="flex-row items-center">
-          <Ionicons name={option.icon} size={16} color="#4B5563" />
-          <Text className="text-sm text-gray-900 ml-3">{option.title}</Text>
-        </View>
-        <View className="flex-row items-center">
-          {option.extraText && (
-            <Text className="text-sm text-gray-500 mr-2">{option.extraText}</Text>
-          )}
-          {option.toggle !== undefined ? (
-            <TouchableOpacity
-              className={`w-10 h-5 rounded-full justify-center px-0.5 ${
-                isToggled ? "bg-blue-600" : "bg-gray-300"
-              }`}
-              onPress={() => setIsToggled(!isToggled)}
-              accessibilityLabel={`${option.title} toggle`}
-            >
-              <View
-                className={`w-4 h-4 bg-white rounded-full ${
-                  isToggled ? "ml-5" : "mr-5"
-                }`}
-              />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  }
-);
+// Reminder times
+const reminderTimes = [
+  "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", 
+  "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", 
+  "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", 
+  "8:00 PM", "9:00 PM", "10:00 PM"
+];
 
 const SettingsScreen: React.FC = () => {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const systemTheme = useColorScheme() || 'light';
+  const [searchQuery, setSearchQuery] = useState("");
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminderTime, setReminderTime] = useState("9:00 PM");
+  const [passcodeEnabled, setPasscodeEnabled] = useState(false);
+  const [appVersion] = useState("1.2.3");
 
-  const handleOptionPress = (route: string) => {
-    router.push(route);
+  // Load saved settings
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const savedReminders = await AsyncStorage.getItem('remindersEnabled');
+      if (savedReminders !== null) setRemindersEnabled(JSON.parse(savedReminders));
+
+      const savedReminderTime = await AsyncStorage.getItem('reminderTime');
+      if (savedReminderTime) setReminderTime(savedReminderTime);
+
+      const savedPasscode = await AsyncStorage.getItem('passcodeEnabled');
+      if (savedPasscode !== null) setPasscodeEnabled(JSON.parse(savedPasscode));
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const saveSetting = async (key: string, value: any) => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving setting:', error);
+    }
+  };
+
+  const handleThemeChange = async (newTheme: string) => {
+    await setTheme(newTheme as 'light' | 'dark' | 'system');
+    Alert.alert("Theme Changed", `Theme set to ${themes.find(t => t.id === newTheme)?.name}`);
+  };
+
+  const handleRemindersToggle = async (value: boolean) => {
+    setRemindersEnabled(value);
+    await saveSetting('remindersEnabled', value);
+  };
+
+  const handleReminderTimeChange = async (time: string) => {
+    setReminderTime(time);
+    await saveSetting('reminderTime', time);
+    Alert.alert("Reminder Time Changed", `Reminders set for ${time}`);
+  };
+
+  const handlePasscodeToggle = async (value: boolean) => {
+    if (value) {
+      Alert.alert(
+        "Passcode Lock", 
+        "Set up a passcode to secure your journal entries",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => setPasscodeEnabled(false)
+          },
+          {
+            text: "Set Passcode",
+            onPress: async () => {
+              setPasscodeEnabled(true);
+              await saveSetting('passcodeEnabled', true);
+              Alert.alert("Success", "Passcode lock enabled");
+            }
+          }
+        ]
+      );
+    } else {
+      setPasscodeEnabled(false);
+      await saveSetting('passcodeEnabled', false);
+      Alert.alert("Passcode Disabled", "Passcode lock has been turned off");
+    }
+  };
+
+  const handleDataBackup = () => {
+    Alert.alert(
+      "Data Backup", 
+      "Backup your journal data to the cloud?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Backup Now",
+          onPress: () => Alert.alert("Backup Started", "Your data is being backed up securely")
+        }
+      ]
+    );
+  };
+
+  const handleExportData = () => {
+    Alert.alert(
+      "Export Data", 
+      "Export your journal data as a PDF or text file?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "PDF",
+          onPress: () => Alert.alert("PDF Export", "Preparing your journal as a PDF...")
+        },
+        {
+          text: "Text File",
+          onPress: () => Alert.alert("Text Export", "Preparing your journal as a text file...")
+        }
+      ]
+    );
+  };
+
+  const handleContactSupport = () => {
+    Linking.openURL('mailto:support@journalapp.com?subject=Journal App Support Request');
+  };
+
+  const handleTermsOfService = () => {
+    Linking.openURL('https://example.com/terms');
+  };
+
+  const handlePrivacyPolicy = () => {
+    Linking.openURL('https://example.com/privacy');
+  };
+
+  const handleRateApp = () => {
+    Alert.alert("Rate App", "Would you like to rate our app in the store?", [
+      {
+        text: "Not Now",
+        style: "cancel"
+      },
+      {
+        text: "Rate Now",
+        onPress: () => Linking.openURL('https://example.com/app-store-link')
+      }
+    ]);
+  };
+
+  const handleFAQs = () => {
+    Alert.alert("FAQs", "Frequently Asked Questions will be shown here");
+  };
+
+  const handleClearData = () => {
+    Alert.alert(
+      "Clear All Data", 
+      "This will permanently delete all your journal entries. This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete Everything",
+          style: "destructive",
+          onPress: () => Alert.alert("Data Cleared", "All your journal entries have been deleted")
+        }
+      ]
+    );
+  };
+
+  const sections: Section[] = [
+    {
+      title: "Appearance",
+      options: [
+        { 
+          id: "theme", 
+          title: "Theme", 
+          icon: "moon" as const, 
+          extraText: themes.find(t => t.id === theme)?.name,
+          action: () => {
+            Alert.alert(
+              "Select Theme",
+              "Choose your preferred theme",
+              themes.map(t => ({
+                text: t.name,
+                onPress: () => handleThemeChange(t.id),
+                style: theme === t.id ? "default" : "cancel"
+              }))
+            );
+          }
+        },
+      ],
+    },
+    {
+      title: "Notifications",
+      options: [
+        {
+          id: "reminders",
+          title: "Daily Reminders",
+          icon: "notifications" as const,
+          toggle: remindersEnabled,
+          action: () => handleRemindersToggle(!remindersEnabled)
+        },
+        {
+          id: "reminder-time",
+          title: "Reminder Time",
+          icon: "time" as const,
+          extraText: reminderTime,
+          action: () => {
+            Alert.alert(
+              "Select Reminder Time",
+              "Choose when you want to receive reminders",
+              reminderTimes.map(time => ({
+                text: time,
+                onPress: () => handleReminderTimeChange(time),
+                style: reminderTime === time ? "default" : "cancel"
+              }))
+            );
+          }
+        },
+      ],
+    },
+    {
+      title: "Data & Security",
+      options: [
+        {
+          id: "data-backup",
+          title: "Cloud Backup",
+          icon: "cloud" as const,
+          action: handleDataBackup
+        },
+        {
+          id: "export-data",
+          title: "Export Data",
+          icon: "download" as const,
+          action: handleExportData
+        },
+        {
+          id: "passcode-lock",
+          title: "Passcode Lock",
+          icon: "lock-closed" as const,
+          toggle: passcodeEnabled,
+          action: () => handlePasscodeToggle(!passcodeEnabled)
+        },
+        {
+          id: "clear-data",
+          title: "Clear All Data",
+          icon: "trash" as const,
+          action: handleClearData
+        },
+      ],
+    },
+    {
+      title: "Help & Support",
+      options: [
+        { 
+          id: "faqs", 
+          title: "FAQs & Help", 
+          icon: "help-circle" as const, 
+          action: handleFAQs 
+        },
+        {
+          id: "contact-support",
+          title: "Contact Support",
+          icon: "chatbubble" as const,
+          action: handleContactSupport
+        },
+        {
+          id: "rate-app",
+          title: "Rate Our App",
+          icon: "star" as const,
+          action: handleRateApp
+        },
+      ],
+    },
+    {
+      title: "About",
+      options: [
+        {
+          id: "app-version",
+          title: "App Version",
+          icon: "information-circle" as const,
+          extraText: `v${appVersion}`,
+          action: () => {}
+        },
+        {
+          id: "terms-of-service",
+          title: "Terms of Service",
+          icon: "document-text" as const,
+          action: handleTermsOfService
+        },
+        {
+          id: "privacy-policy",
+          title: "Privacy Policy",
+          icon: "shield" as const,
+          action: handlePrivacyPolicy
+        },
+      ],
+    },
+  ];
+
+  // Filter options based on search query
+  const filteredSections = sections.map(section => ({
+    ...section,
+    options: section.options.filter(option =>
+      option.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      section.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(section => section.options.length > 0);
+
+  // Option component
+  const SettingOption = memo(
+    ({
+      option,
+      onPress,
+    }: {
+      option: SettingOption;
+      onPress: (option: SettingOption) => void;
+    }) => {
+      return (
+        <TouchableOpacity
+          className="flex-row justify-between items-center p-4 border-b border-gray-100 active:bg-gray-50"
+          onPress={() => onPress(option)}
+          accessibilityLabel={option.title}
+          accessibilityRole="button"
+        >
+          <View className="flex-row items-center flex-1">
+            <View className="w-8 items-center">
+              <Ionicons name={option.icon} size={20} color="#4B5563" />
+            </View>
+            <Text className="text-base text-gray-900 ml-3 flex-1">{option.title}</Text>
+          </View>
+          <View className="flex-row items-center">
+            {option.extraText && (
+              <Text className="text-sm text-gray-500 mr-3">{option.extraText}</Text>
+            )}
+            {option.toggle !== undefined ? (
+              <Switch
+                value={option.toggle}
+                onValueChange={() => onPress(option)}
+                trackColor={{ false: "#D1D5DB", true: "#3B82F6" }}
+                thumbColor={option.toggle ? "#FFFFFF" : "#FFFFFF"}
+              />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    }
+  );
+
+  const handleOptionPress = (option: SettingOption) => {
+    if (option.action) {
+      option.action();
+    } else if (option.route) {
+      router.push(option.route);
+    }
   };
 
   const renderSection = ({ item }: { item: Section }) => (
     <View className="mb-4">
-      <Text className="text-xs font-medium text-gray-500 uppercase ml-4 mb-2">
+      <Text className="text-xs font-medium text-gray-500 uppercase px-4 py-2">
         {item.title}
       </Text>
-      <View className="bg-white">
+      <View className="bg-white rounded-lg overflow-hidden">
         <FlatList
           data={item.options}
           keyExtractor={(option) => option.id}
@@ -190,32 +425,57 @@ const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-1 bg-gray-50">
-        <Stack.Screen options={{ title: "Settings" }} />
-        <View className="bg-white px-4 py-4 items-center">
-          <Text className="text-xl font-semibold text-gray-900">Settings</Text>
+        <Stack.Screen 
+          options={{ 
+            title: "Settings",
+            headerStyle: {
+              backgroundColor: "#f9fafb",
+            },
+            headerShadowVisible: false,
+          }} 
+        />
+        
+        {/* Header */}
+        <View className="bg-white px-6 py-6 border-b border-gray-200">
+          <Text className="text-3xl font-bold text-gray-900">Settings</Text>
+          <Text className="text-gray-600 mt-1">Customize your journal experience</Text>
         </View>
-        <View className="flex-row items-center bg-white rounded-lg border border-gray-200 mx-4 my-4 px-3 py-2">
-          <Ionicons
-            name="search"
-            size={16}
-            color="#9CA3AF"
-            className="mr-2"
-          />
+
+        {/* Search Bar */}
+        <View className="bg-white mx-4 my-4 rounded-xl border border-gray-200 px-4 py-3 flex-row items-center shadow-sm">
+          <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
-            className="flex-1 py-0 text-sm text-gray-900"
+            className="flex-1 py-0 text-base text-gray-900 ml-3"
             placeholder="Search settings"
             placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
             accessibilityLabel="Search settings input"
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Settings List */}
         <FlatList
-          data={sections}
+          data={filteredSections}
           keyExtractor={(section) => section.title}
           renderItem={renderSection}
           showsVerticalScrollIndicator={false}
           className="px-4"
-          contentContainerStyle={{ paddingBottom: 64 }}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          ListEmptyComponent={
+            <View className="flex-1 items-center justify-center py-10">
+              <Ionicons name="search" size={40} color="#9CA3AF" />
+              <Text className="text-gray-500 mt-2 text-center">No settings found for "{searchQuery}"</Text>
+            </View>
+          }
         />
+
+
       </View>
     </SafeAreaView>
   );
