@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import {
   DateTimePickerAndroid,
@@ -21,6 +22,16 @@ import { createJournal } from "@/services/journalService";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 interface JournalScreenProps {
   setCurrentScreen?: (screen: string) => void;
   moods?: Mood[];
@@ -33,16 +44,16 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   const { prompt } = useLocalSearchParams();
   const [promptReceived, setPromptReceived] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]); // State for real data
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [showReminder, setShowReminder] = useState(false);
   const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
 
-  // State for modal and form
   const [isModalVisible, setModalVisible] = useState(false);
   const [newEntry, setNewEntry] = useState<JournalEntry>({
     id: "",
     title: "",
     content: "",
-    date: new Date().toISOString().split("T")[0],
+    date: new Date().toLocaleDateString("en-CA"),
     mood: "",
   });
   const [tempEntries, setTempEntries] = useState<JournalEntry[]>([]);
@@ -53,7 +64,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   ).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
 
-  // Mood color mapping
   const moodColorMap = {
     amazing: "#22c55e",
     good: "#3b82f6",
@@ -62,43 +72,116 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     awful: "#ef4444",
   };
 
-  // Fetch real-time journal entries from Firestore
   useEffect(() => {
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      console.log("Notification permissions:", status);
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please enable notifications in settings to receive journal reminders.",
+          [{ text: "OK" }]
+        );
+      }
+    };
+    requestPermissions();
+  }, []);
+
+  useEffect(() => {
+    const today = new Date().toLocaleDateString("en-CA");
+    const hasEntry = journalEntries.some((entry) => entry.date === today);
+    setShowReminder(!hasEntry);
+    console.log("Has entry for today:", hasEntry, "Show reminder:", !hasEntry);
+  }, [journalEntries]);
+
+  const scheduleNotification = useCallback(async () => {
+    try {
+      const today = new Date().toLocaleDateString("en-CA");
+      const hasEntry = journalEntries.some((entry) => entry.date === today);
+      
+      console.log("Scheduling notification - Has entry for today:", hasEntry);
+      
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      console.log("Cancelled all previous notifications");
+
+      if (hasEntry) {
+        console.log("Journal entry exists for today, no notification needed");
+        return;
+      }
+
+      // Set notification for 11:59 PM today
+      const notificationTime = new Date();
+      notificationTime.setHours(23, 59, 0, 0);
+      
+      // For testing: show notification in 10 seconds
+      // const notificationTime = new Date(Date.now() + 10 * 1000);
+
+      console.log("Notification scheduled for:", notificationTime);
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Journal Reminder",
+          body: "Don't forget to add your journal entry for today!",
+          sound: "default",
+        },
+        trigger: { date: notificationTime },
+      });
+      console.log("Notification scheduled successfully");
+    } catch (error) {
+      console.error("Notification scheduling error:", error);
+      Alert.alert("Error", "Failed to schedule notification.");
+    }
+  }, [journalEntries]);
+
+  useEffect(() => {
+    console.log("Current User:", auth.currentUser?.uid);
+    if (!auth.currentUser) {
+      console.log("User not logged in");
+      Alert.alert("Error", "Please log in to view your journal.");
+      return;
+    }
+
+    console.log("Fetching journal entries from Firestore...");
     const unsubscribe = onSnapshot(
       collection(db, "journal"),
       (querySnapshot) => {
         const allJournals = querySnapshot.docs
           .filter((doc) => doc.data().userId === auth.currentUser?.uid)
-          .map(
-            (doc) =>
-              ({
-                ...doc.data(),
-                id: doc.id,
-              }) as JournalEntry
-          );
+          .map((doc) => ({ ...doc.data(), id: doc.id }) as JournalEntry);
+        console.log("Fetched journal entries:", allJournals);
         setJournalEntries(allJournals);
-        setTempEntries(allJournals); // Update tempEntries to reflect real data
+        setTempEntries(allJournals);
+        
+        // Update showReminder based on today's entry
+        const today = new Date().toLocaleDateString("en-CA");
+        const hasEntry = allJournals.some((entry) => entry.date === today);
+        setShowReminder(!hasEntry);
+      },
+      (error) => {
+        console.error("Firestore error:", error);
+        Alert.alert("Error", "Failed to fetch journal entries. Please try again.");
       }
     );
 
     return () => unsubscribe();
   }, []);
 
-  // Reset prompt state when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
+      console.log("Screen focused, scheduling notification...");
+      scheduleNotification();
       setPromptReceived(false);
-    }, [])
+    }, [scheduleNotification])
   );
 
-  // Auto-open modal if prompt is passed and it's the first time
   useEffect(() => {
     if (prompt && isFirstTime) {
+      console.log("Prompt received, opening modal:", prompt);
       setNewEntry({
         id: "",
         title: "Daily Reflection",
         content: `Prompt: ${prompt}\n\n`,
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toLocaleDateString("en-CA"),
         mood: "",
       });
       setModalVisible(true);
@@ -107,7 +190,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     }
   }, [prompt, isFirstTime]);
 
-  // Handle mood button animation
   const animateMoodButton = (index: number) => {
     Animated.sequence([
       Animated.timing(animatedValues[index], {
@@ -123,7 +205,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     ]).start();
   };
 
-  // Handle modal animation
   const animateModal = (visible: boolean) => {
     Animated.timing(modalOpacity, {
       toValue: visible ? 1 : 0,
@@ -132,7 +213,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     }).start();
   };
 
-  // Handle Android date picker
   const showDatePickerAndroid = () => {
     DateTimePickerAndroid.open({
       value: date,
@@ -144,42 +224,55 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
           setDate(selectedDate);
           setNewEntry({
             ...newEntry,
-            date: selectedDate.toISOString().split("T")[0],
+            date: selectedDate.toLocaleDateString("en-CA"),
           });
         }
       },
     });
   };
 
-  // Handle iOS date picker
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setDate(selectedDate);
       setNewEntry({
         ...newEntry,
-        date: selectedDate.toISOString().split("T")[0],
+        date: selectedDate.toLocaleDateString("en-CA"),
       });
     }
   };
 
-  // Handle form submission
   const handleSubmit = async () => {
     if (newEntry.title && newEntry.content && newEntry.mood) {
-      const newId = (tempEntries.length + 1).toString();
-      await createJournal({ ...newEntry, userId: auth.currentUser?.uid }); // Add userId to new entry
-      setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
-      closeModal();
+      console.log("Submitting new journal entry:", newEntry);
+      try {
+        const newId = (tempEntries.length + 1).toString();
+        await createJournal({ ...newEntry, userId: auth.currentUser?.uid });
+        setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
+        closeModal();
+        
+        // Update showReminder after submitting
+        const today = new Date().toLocaleDateString("en-CA");
+        if (newEntry.date === today) {
+          setShowReminder(false);
+        }
+      } catch (error) {
+        console.error("Error saving journal entry:", error);
+        Alert.alert("Error", "Failed to save journal entry.");
+      }
+    } else {
+      console.log("Form incomplete:", newEntry);
+      Alert.alert("Error", "Please fill in all fields (title, content, mood).");
     }
   };
 
-  // Open modal
   const openModal = () => {
+    console.log("Opening modal for new journal entry");
     setNewEntry({
       id: "",
       title: "",
       content: "",
-      date: new Date().toISOString().split("T")[0],
+      date: new Date().toLocaleDateString("en-CA"),
       mood: "",
     });
     setDate(new Date());
@@ -188,15 +281,15 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     setIsFirstTime(false);
   };
 
-  // Close modal and reset form
   const closeModal = () => {
+    console.log("Closing modal");
     setModalVisible(false);
     animateModal(false);
     setNewEntry({
       id: "",
       title: "",
       content: "",
-      date: new Date().toISOString().split("T")[0],
+      date: new Date().toLocaleDateString("en-CA"),
       mood: "",
     });
     setDate(new Date());
@@ -205,7 +298,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-1 bg-gray-50">
-        {/* Modal for New Journal Entry */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -220,19 +312,13 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               <Text className="text-xl font-bold text-gray-900 mb-4">
                 New Journal Entry
               </Text>
-
-              {/* Title Input */}
               <TextInput
                 className="border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 bg-gray-50"
                 placeholder="Title"
                 value={newEntry.title}
-                onChangeText={(text) =>
-                  setNewEntry({ ...newEntry, title: text })
-                }
+                onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
                 accessibilityLabel="Enter journal entry title"
               />
-
-              {/* Content Input */}
               <TextInput
                 className="border border-gray-300 rounded-lg p-3 mb-4 text-gray-900 bg-gray-50 h-32"
                 placeholder="Write your thoughts..."
@@ -243,8 +329,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                 multiline
                 accessibilityLabel="Enter journal entry content"
               />
-
-              {/* Date Picker Trigger */}
               <TouchableOpacity
                 className="border border-gray-300 rounded-lg p-3 mb-4 bg-gray-50"
                 onPress={() => {
@@ -261,8 +345,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   Date: {newEntry.date}
                 </Text>
               </TouchableOpacity>
-
-              {/* iOS Date Picker */}
               {Platform.OS !== "android" && showDatePicker && (
                 <DateTimePicker
                   value={date}
@@ -271,8 +353,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   onChange={onDateChange}
                 />
               )}
-
-              {/* Mood Selection */}
               <Text className="text-sm font-semibold text-gray-900 mb-2">
                 Select Mood
               </Text>
@@ -314,8 +394,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
                   </Animated.View>
                 ))}
               </View>
-
-              {/* Buttons */}
               <View className="flex-row justify-end" style={{ gap: 8 }}>
                 <TouchableOpacity
                   className="bg-gray-200 py-2 px-4 rounded-full"
@@ -354,15 +432,27 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </View>
           </Animated.View>
         </Modal>
-
-        {/* Header */}
         <View className="flex-row justify-between items-center bg-white px-4 py-4 border-b border-gray-200">
           <Text className="text-xl font-semibold text-gray-900">Journal</Text>
         </View>
-
-        {/* Content */}
         <ScrollView className="p-4">
-          {/* Add New Journal Button at the Top */}
+          {showReminder && (
+            <View className="bg-yellow-100 p-4 rounded-lg mb-4">
+              <Text className="text-sm font-medium text-yellow-800">
+                You haven't added a journal entry for today yet!
+              </Text>
+              <TouchableOpacity
+                className="bg-yellow-600 py-2 px-4 rounded-full mt-2"
+                onPress={openModal}
+                accessibilityLabel="Add journal entry now"
+                accessibilityRole="button"
+              >
+                <Text className="text-sm font-medium text-white text-center">
+                  Add Now
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
             className="bg-purple-600 py-3 rounded-lg mb-4"
             onPress={openModal}
@@ -373,7 +463,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               + New Journal Entry
             </Text>
           </TouchableOpacity>
-
           {tempEntries.map((entry) => (
             <TouchableOpacity
               key={entry.id}
