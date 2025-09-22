@@ -8,7 +8,7 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
-  Alert,
+  Alert, // Alert is already imported
   Modal,
   Animated,
 } from 'react-native';
@@ -95,24 +95,57 @@ export default function SignIn() {
   const handleSignIn = async () => {
     try {
       setError('');
-      setIsLoading(true);
-
+      
+      // Validate inputs
       if (!email || !password) {
-        setError('Please fill in all fields');
+        Alert.alert('Missing Information', 'Please fill in all fields');
         return;
       }
 
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.toLowerCase())) {
+        Alert.alert('Invalid Email', 'Please enter a valid email address');
+        return;
+      }
+
+      setIsLoading(true);
       await signIn(email, password);
-      router.push('/home');
+      
+      // Show success alert
+      Alert.alert(
+        'Success!', 
+        'You have successfully signed in.',
+        [{ text: 'OK', onPress: () => router.push('/home') }]
+      );
     } catch (err) {
       const error = err as Error;
-      setError(error.message || 'Sign in failed');
+      const errorMessage = error.message || 'Sign in failed';
+      
+      // Show error alert with more user-friendly messages
+      let alertMessage = errorMessage;
+      if (errorMessage.includes('auth/invalid-email')) {
+        alertMessage = 'The email address is not valid.';
+      } else if (errorMessage.includes('auth/user-not-found')) {
+        alertMessage = 'No account found with this email address.';
+      } else if (errorMessage.includes('auth/wrong-password')) {
+        alertMessage = 'Incorrect password. Please try again.';
+      } else if (errorMessage.includes('auth/too-many-requests')) {
+        alertMessage = 'Too many failed attempts. Please try again later.';
+      }
+      
+      Alert.alert('Sign In Failed', alertMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address first');
+      return;
+    }
+    
     setForgotPasswordEmail(email);
     setShowForgotPasswordModal(true);
     setError('');
@@ -120,13 +153,13 @@ export default function SignIn() {
 
   const handleForgotPasswordSubmit = async () => {
     if (!forgotPasswordEmail.trim()) {
-      setError('Please enter your email address');
+      Alert.alert('Email Required', 'Please enter your email address');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(forgotPasswordEmail.toLowerCase())) {
-      setError('Please enter a valid email address');
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
@@ -137,26 +170,32 @@ export default function SignIn() {
       const result = await sendOTP({ email: forgotPasswordEmail.toLowerCase() });
 
       if (result.data.success) {
-        Alert.alert('Success', 'OTP has been sent to your email');
+        Alert.alert('OTP Sent', 'A verification code has been sent to your email');
         setShowForgotPasswordModal(false);
         setEmail(forgotPasswordEmail.toLowerCase());
         setShowOTPModal(true);
         startResendTimer();
       } else {
+        Alert.alert('Error', 'Failed to send OTP. Please try again.');
         setError('Failed to send OTP');
       }
     } catch (err) {
       const error = err as any;
+      let errorMessage = error.message || 'Failed to send OTP. Please try again.';
+      
       switch (error.code) {
         case 'functions/invalid-argument':
-          setError('Invalid email address');
+          errorMessage = 'Invalid email address';
           break;
         case 'functions/not-found':
-          setError('User not found');
+          errorMessage = 'No account found with this email address';
           break;
         default:
-          setError(error.message || 'Failed to send OTP. Please try again.');
+          errorMessage = error.message || 'Failed to send OTP. Please try again.';
       }
+      
+      Alert.alert('Error', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -168,17 +207,17 @@ export default function SignIn() {
       setError('');
 
       if (otp.length !== 6) {
-        setError('Please enter a valid 6-digit OTP');
+        Alert.alert('Invalid OTP', 'Please enter a valid 6-digit OTP');
         return;
       }
 
       if (!newPassword) {
-        setError('Please enter a new password');
+        Alert.alert('Password Required', 'Please enter a new password');
         return;
       }
 
       if (newPassword.length < 8) {
-        setError('Password must be at least 8 characters long');
+        Alert.alert('Weak Password', 'Password must be at least 8 characters long');
         return;
       }
 
@@ -186,34 +225,45 @@ export default function SignIn() {
       const result = await verifyOTP({ email, otp, newPassword });
 
       if (result.data.success) {
-        Alert.alert('Success', 'Password updated successfully. Please sign in.');
-        setShowOTPModal(false);
-        setOTP('');
-        setNewPassword('');
-        setResendTimer(0);
-        setCanResend(true);
+        Alert.alert(
+          'Success', 
+          'Password updated successfully. Please sign in with your new password.',
+          [{ text: 'OK', onPress: () => {
+            setShowOTPModal(false);
+            setOTP('');
+            setNewPassword('');
+            setResendTimer(0);
+            setCanResend(true);
+          }}]
+        );
       } else {
+        Alert.alert('Error', 'OTP verification failed. Please try again.');
         setError('OTP verification failed');
       }
     } catch (err) {
       const error = err as any;
+      let errorMessage = error.message || 'OTP verification failed. Please try again.';
+      
       switch (error.code) {
         case 'functions/invalid-argument':
-          setError('Invalid OTP or password');
+          errorMessage = 'Invalid OTP or password';
           break;
         case 'functions/deadline-exceeded':
-          setError('OTP has expired');
+          errorMessage = 'OTP has expired. Please request a new one.';
           break;
         case 'functions/not-found':
-          setError('OTP not found');
+          errorMessage = 'OTP not found or already used';
           break;
         default:
-          setError(error.message || 'OTP verification failed. Please try again.');
+          errorMessage = error.message || 'OTP verification failed. Please try again.';
       }
+      
+      Alert.alert('Error', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }; // Fixed: Added missing closing brace
+  };
 
   const handleResendOTP = async () => {
     if (!canResend) return;
@@ -224,13 +274,15 @@ export default function SignIn() {
       const sendOTP = httpsCallable<SendOTPResponse>(functions, 'sendOTP');
       const result = await sendOTP({ email });
       if (result.data.success) {
-        Alert.alert('Success', 'New OTP has been sent to your email');
+        Alert.alert('OTP Sent', 'A new verification code has been sent to your email');
         startResendTimer();
       } else {
+        Alert.alert('Error', 'Failed to resend OTP. Please try again.');
         setError('Failed to resend OTP');
       }
     } catch (err) {
       const error = err as any;
+      Alert.alert('Error', error.message || 'Failed to resend OTP');
       setError(error.message || 'Failed to resend OTP');
     } finally {
       setIsLoading(false);
