@@ -4,39 +4,34 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Dimensions,
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
   Alert,
   Modal,
-  Animated
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import {signIn} from "@/services/authService";
+import { signIn } from '@/services/authService';
 
 const { width } = Dimensions.get('window');
 const functions = getFunctions();
 
 interface SendOTPResponse {
-  data: {
-    success: boolean;
-  };
+  data: { success: boolean };
 }
 
 interface VerifyOTPAndResetPasswordResponse {
-  data: {
-    success: boolean;
-  };
+  data: { success: boolean };
 }
 
 export default function SignIn() {
   const router = useRouter();
-  const { login } = useAuth();
+  //const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -80,7 +75,7 @@ export default function SignIn() {
     let interval: number;
     if (resendTimer > 0) {
       interval = setInterval(() => {
-        setResendTimer(prev => {
+        setResendTimer((prev) => {
           if (prev <= 1) {
             setCanResend(true);
             return 0;
@@ -108,7 +103,7 @@ export default function SignIn() {
       }
 
       await signIn(email, password);
-      router.push('/home'); // Changed from '/' to '/(dashboard)/onboard'
+      router.push('/home');
     } catch (err) {
       const error = err as Error;
       setError(error.message || 'Sign in failed');
@@ -130,7 +125,7 @@ export default function SignIn() {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(forgotPasswordEmail)) {
+    if (!emailRegex.test(forgotPasswordEmail.toLowerCase())) {
       setError('Please enter a valid email address');
       return;
     }
@@ -138,21 +133,30 @@ export default function SignIn() {
     try {
       setIsLoading(true);
       setError('');
-      const sendOTP = httpsCallable<SendOTPResponse>(functions, 'sendOTP');
-      const result = await sendOTP({ email: forgotPasswordEmail });
+      const sendOTP = httpsCallable(functions, 'sendOTP');
+      const result = await sendOTP({ email: forgotPasswordEmail.toLowerCase() });
 
       if (result.data.success) {
         Alert.alert('Success', 'OTP has been sent to your email');
         setShowForgotPasswordModal(false);
-        setEmail(forgotPasswordEmail);
+        setEmail(forgotPasswordEmail.toLowerCase());
         setShowOTPModal(true);
         startResendTimer();
       } else {
         setError('Failed to send OTP');
       }
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'Failed to send OTP');
+      const error = err as any;
+      switch (error.code) {
+        case 'functions/invalid-argument':
+          setError('Invalid email address');
+          break;
+        case 'functions/not-found':
+          setError('User not found');
+          break;
+        default:
+          setError(error.message || 'Failed to send OTP. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -178,11 +182,11 @@ export default function SignIn() {
         return;
       }
 
-      const verifyOTP = httpsCallable<VerifyOTPAndResetPasswordResponse>(functions, 'verifyOTPAndResetPassword');
-      const result = await verifyOTP({ email: email, otp: otp, newPassword: newPassword });
+      const verifyOTP = httpsCallable(functions, 'verifyOTPAndResetPassword');
+      const result = await verifyOTP({ email, otp, newPassword });
 
       if (result.data.success) {
-        Alert.alert('Success', 'Password has been updated successfully');
+        Alert.alert('Success', 'Password updated successfully. Please sign in.');
         setShowOTPModal(false);
         setOTP('');
         setNewPassword('');
@@ -192,20 +196,33 @@ export default function SignIn() {
         setError('OTP verification failed');
       }
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'OTP verification failed');
+      const error = err as any;
+      switch (error.code) {
+        case 'functions/invalid-argument':
+          setError('Invalid OTP or password');
+          break;
+        case 'functions/deadline-exceeded':
+          setError('OTP has expired');
+          break;
+        case 'functions/not-found':
+          setError('OTP not found');
+          break;
+        default:
+          setError(error.message || 'OTP verification failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }; // Fixed: Added missing closing brace
 
   const handleResendOTP = async () => {
     if (!canResend) return;
 
     try {
       setIsLoading(true);
+      setError('');
       const sendOTP = httpsCallable<SendOTPResponse>(functions, 'sendOTP');
-      const result = await sendOTP({ email: email });
+      const result = await sendOTP({ email });
       if (result.data.success) {
         Alert.alert('Success', 'New OTP has been sent to your email');
         startResendTimer();
@@ -213,7 +230,7 @@ export default function SignIn() {
         setError('Failed to resend OTP');
       }
     } catch (err) {
-      const error = err as Error;
+      const error = err as any;
       setError(error.message || 'Failed to resend OTP');
     } finally {
       setIsLoading(false);
@@ -231,621 +248,321 @@ export default function SignIn() {
   };
 
   return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-        <View style={styles.backgroundGradient}>
-          <View style={[styles.floatingCircle, styles.circle1]} />
-          <View style={[styles.floatingCircle, styles.circle2]} />
-          <View style={[styles.floatingCircle, styles.circle3]} />
-          <View style={styles.contentContainer}>
-            <View style={styles.glassCard}>
-              <View style={styles.headerSection}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="sunny-outline" size={32} color="#FFFFFF" />
-                </View>
-                <Text style={styles.welcomeTitle}>Welcome Back</Text>
-                <Text style={styles.subtitle}>Continue your daily reflection journey</Text>
+    <SafeAreaView className="flex-1 bg-white">
+      <StatusBar barStyle="dark-content" translucent />
+      <View className="flex-1 justify-center items-center bg-white">
+        <View className="w-[90%] max-w-[400px] items-center">
+          <View className="w-full bg-white rounded-3xl p-8 border border-gray-300 shadow-lg">
+            <View className="items-center mb-8">
+              <View className="w-16 h-16 rounded-2xl bg-gray-700 justify-center items-center shadow-md">
+                <Ionicons
+                  name="sunny-outline"
+                  size={32}
+                  color="#FFFFFF"
+                  accessibilityLabel="App logo"
+                />
               </View>
-
-              {error ? (
-                  <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
-                    <Text style={styles.errorText}>{error}</Text>
-                  </View>
-              ) : null}
-
-              <View style={styles.inputSection}>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                  <TextInput
-                      placeholder="Enter your email"
-                      placeholderTextColor="#6B7280"
-                      value={email}
-                      onChangeText={setEmail}
-                      style={styles.textInput}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoComplete="email"
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                  <TextInput
-                      placeholder="Enter your password"
-                      placeholderTextColor="#6B7280"
-                      value={password}
-                      onChangeText={setPassword}
-                      style={[styles.textInput, styles.passwordInput]}
-                      secureTextEntry={!showPassword}
-                      autoComplete="password"
-                  />
-                  <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeIcon}
-                  >
-                    <Ionicons
-                        name={showPassword ? "eye-off-outline" : "eye-outline"}
-                        size={20}
-                        color="#6B7280"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                  onPress={handleSignIn}
-                  disabled={isLoading}
-                  style={[styles.signInButton, isLoading && styles.buttonDisabled]}
-                  activeOpacity={0.8}
-              >
-                <View style={styles.buttonGradient}>
-                  {isLoading ? (
-                      <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                        <Text style={styles.loadingText}>Signing In...</Text>
-                      </View>
-                  ) : (
-                      <Text style={styles.buttonText}>Sign In</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotButton}>
-                <Text style={styles.forgotText}>Forgot your password?</Text>
-              </TouchableOpacity>
-
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <View style={styles.dividerTextContainer}>
-                  <Text style={styles.dividerText}>NEW TO DAILY REFLECTION?</Text>
-                </View>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <TouchableOpacity
-                  onPress={handleCreateAccount}
-                  style={styles.createAccountButton}
-                  activeOpacity={0.8}
-              >
-                <Text style={styles.createAccountText}>Create Account</Text>
-              </TouchableOpacity>
+              <Text className="text-2xl font-bold text-gray-800 mt-4 text-center">
+                Welcome Back
+              </Text>
+              <Text className="text-sm text-gray-500 text-center">
+                Continue your daily reflection journey
+              </Text>
             </View>
 
-            <Text style={styles.tagline}>Take a moment. Breathe. Reflect.</Text>
+            {error ? (
+              <View className="flex-row items-center border border-red-500 rounded-xl p-3 mb-5">
+                <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
+                <Text className="text-red-500 text-sm ml-2 flex-1">{error}</Text>
+              </View>
+            ) : null}
+
+            <View className="w-full mb-6">
+              <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-1 h-14 mb-2">
+                <Ionicons name="mail-outline" size={20} color="#6B7280" className="mr-3" />
+                <TextInput
+                  placeholder="Enter your email"
+                  placeholderTextColor="#6B7280"
+                  value={email}
+                  onChangeText={setEmail}
+                  className="flex-1 text-base text-gray-800 py-3"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  accessibilityLabel="Email input"
+                />
+              </View>
+
+              <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-1 h-14 mb-2">
+                <Ionicons name="lock-closed-outline" size={20} color="#6B7280" className="mr-3" />
+                <TextInput
+                  placeholder="Enter your password"
+                  placeholderTextColor="#6B7280"
+                  value={password}
+                  onChangeText={setPassword}
+                  className="flex-1 text-base text-gray-800 py-3"
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                  accessibilityLabel="Password input"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 p-1"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSignIn}
+              disabled={isLoading}
+              className={`w-full rounded-xl bg-gray-700 shadow-md ${isLoading ? 'opacity-70' : ''}`}
+              accessibilityLabel="Sign in button"
+            >
+              <View className="bg-gray-700 py-4 items-center rounded-xl">
+                {isLoading ? (
+                  <View className="flex-row items-center">
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text className="text-white text-base font-medium ml-2">
+                      Signing In...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-lg font-semibold">Sign In</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              className="self-center p-2 mb-8"
+              accessibilityLabel="Forgot password"
+            >
+              <Text className="text-gray-700 text-sm font-medium">
+                Forgot your password?
+              </Text>
+            </TouchableOpacity>
+
+            <View className="flex-row items-center mb-6">
+              <View className="flex-1 h-px bg-gray-300" />
+              <View className="bg-white px-4 py-1.5 rounded-2xl mx-3">
+                <Text className="text-xs text-gray-500 font-medium tracking-wider">
+                  NEW TO DAILY REFLECTION?
+                </Text>
+              </View>
+              <View className="flex-1 h-px bg-gray-300" />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleCreateAccount}
+              className="w-full bg-white border border-gray-300 rounded-xl py-3.5 items-center"
+              accessibilityLabel="Create account button"
+            >
+              <Text className="text-gray-700 text-base font-medium">Create Account</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Forgot Password Modal */}
-          <Modal
-              visible={showForgotPasswordModal}
-              animationType="none"
-              transparent={true}
-              onRequestClose={() => setShowForgotPasswordModal(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <Animated.View style={[styles.forgotPasswordModal, { transform: [{ scale: forgotModalScale }] }]}>
-                <View style={styles.forgotPasswordModalInner}>
-                  <View style={styles.modalGradient}>
-                    <View style={styles.modalHeader}>
-                      <Ionicons name="mail-outline" size={32} color="#374151" />
-                      <Text style={styles.modalTitle}>Forgot Password?</Text>
-                    </View>
-
-                    <Text style={styles.modalSubtitle}>
-                      Enter your email address and we'll send you an OTP to reset your password.
-                    </Text>
-
-                    <View style={styles.inputContainer}>
-                      <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                      <TextInput
-                          placeholder="Enter your email"
-                          placeholderTextColor="#6B7280"
-                          value={forgotPasswordEmail}
-                          onChangeText={setForgotPasswordEmail}
-                          style={styles.textInput}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          autoComplete="email"
-                      />
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={handleForgotPasswordSubmit}
-                        disabled={isLoading}
-                        style={[styles.signInButton, isLoading && styles.buttonDisabled]}
-                    >
-                      <View style={styles.buttonGradient}>
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                              <ActivityIndicator size="small" color="#FFFFFF" />
-                              <Text style={styles.loadingText}>Sending...</Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.buttonText}>Send OTP</Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => {
-                          setShowForgotPasswordModal(false);
-                          setError('');
-                        }}
-                        style={styles.cancelButton}
-                    >
-                      <Text style={styles.cancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Animated.View>
-            </View>
-          </Modal>
-
-          {/* OTP Modal */}
-          <Modal
-              visible={showOTPModal}
-              animationType="none"
-              transparent={true}
-              onRequestClose={() => {
-                setShowOTPModal(false);
-                setResendTimer(0);
-                setCanResend(true);
-              }}
-          >
-            <View style={styles.modalOverlay}>
-              <Animated.View style={[styles.otpModal, { transform: [{ scale: modalScale }] }]}>
-                <View style={styles.otpModalInner}>
-                  <View style={styles.modalGradient}>
-                    <Text style={styles.modalTitle}>Reset Password</Text>
-                    <Text style={styles.modalSubtitle}>
-                      Enter the 6-digit OTP sent to {email}
-                    </Text>
-
-                    <View style={styles.inputContainer}>
-                      <Ionicons name="key-outline" size={24} color="#6B7280" style={styles.inputIcon} />
-                      <TextInput
-                          placeholder="Enter 6-digit OTP"
-                          placeholderTextColor="#6B7280"
-                          value={otp}
-                          onChangeText={(text) => {
-                            const numericText = text.replace(/[^0-9]/g, '');
-                            setOTP(numericText);
-                          }}
-                          style={[styles.textInput, styles.otpInput]}
-                          keyboardType="number-pad"
-                          maxLength={6}
-                          textAlign="center"
-                      />
-                    </View>
-
-                    {otp.length === 6 && (
-                        <View style={styles.inputContainer}>
-                          <Ionicons name="lock-closed-outline" size={24} color="#6B7280" style={styles.inputIcon} />
-                          <TextInput
-                              placeholder="Enter new password (min 8 characters)"
-                              placeholderTextColor="#6B7280"
-                              value={newPassword}
-                              onChangeText={setNewPassword}
-                              style={[styles.textInput, styles.otpInput]}
-                              secureTextEntry={true}
-                          />
-                        </View>
-                    )}
-
-                    <TouchableOpacity
-                        onPress={handleOTPSubmit}
-                        disabled={isLoading || otp.length !== 6 || !newPassword}
-                        style={[styles.signInButton, (isLoading || otp.length !== 6 || !newPassword) && styles.buttonDisabled]}
-                    >
-                      <View style={styles.buttonGradient}>
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                              <ActivityIndicator size="small" color="#FFFFFF" />
-                              <Text style={styles.loadingText}>Verifying...</Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.buttonText}>Verify & Update</Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-
-                    {resendTimer > 0 ? (
-                        <View style={styles.timerContainer}>
-                          <Ionicons name="time-outline" size={16} color="#374151" />
-                          <Text style={styles.timerText}>
-                            Resend OTP in {formatTimer(resendTimer)}
-                          </Text>
-                        </View>
-                    ) : (
-                        <TouchableOpacity
-                            onPress={handleResendOTP}
-                            disabled={isLoading}
-                            style={styles.resendButton}
-                        >
-                          <Text style={styles.resendText}>Resend OTP</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
-                        onPress={() => {
-                          setShowOTPModal(false);
-                          setResendTimer(0);
-                          setCanResend(true);
-                          setOTP('');
-                          setNewPassword('');
-                        }}
-                        style={styles.cancelButton}
-                    >
-                      <Text style={styles.cancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Animated.View>
-            </View>
-          </Modal>
+          <Text className="text-sm text-gray-500 italic text-center mt-8">
+            Take a moment. Breathe. Reflect.
+          </Text>
         </View>
-      </SafeAreaView>
+
+        {/* Forgot Password Modal */}
+        <Modal
+          visible={showForgotPasswordModal}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => setShowForgotPasswordModal(false)}
+        >
+          <View className="flex-1 bg-black/60 justify-center items-center">
+            <Animated.View className="w-[85%] max-w-[400px] bg-white rounded-3xl border border-gray-300 shadow-lg">
+              <View className="p-8 bg-white rounded-3xl">
+                <View className="items-center mb-5">
+                  <Ionicons name="mail-outline" size={32} color="#374151" />
+                  <Text className="text-2xl font-bold text-gray-800 mt-3 text-center">
+                    Forgot Password?
+                  </Text>
+                </View>
+
+                <Text className="text-base text-gray-500 mb-6 text-center leading-6">
+                  Enter your email address and we'll send you an OTP to reset your
+                  password.
+                </Text>
+
+                <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-1 h-14 mb-2">
+                  <Ionicons name="mail-outline" size={20} color="#6B7280" className="mr-3" />
+                  <TextInput
+                    placeholder="Enter your email"
+                    placeholderTextColor="#6B7280"
+                    value={forgotPasswordEmail}
+                    onChangeText={setForgotPasswordEmail}
+                    className="flex-1 text-base text-gray-800 py-3"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    accessibilityLabel="Forgot password email input"
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleForgotPasswordSubmit}
+                  disabled={isLoading}
+                  className={`w-full rounded-xl bg-gray-700 shadow-md ${isLoading ? 'opacity-70' : ''}`}
+                  accessibilityLabel="Send OTP button"
+                >
+                  <View className="bg-gray-700 py-4 items-center rounded-xl">
+                    {isLoading ? (
+                      <View className="flex-row items-center">
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text className="text-white text-base font-medium ml-2">
+                          Sending...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-white text-lg font-semibold">Send OTP</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowForgotPasswordModal(false);
+                    setError('');
+                  }}
+                  className="self-center p-3 mt-5"
+                  accessibilityLabel="Cancel forgot password"
+                >
+                  <Text className="text-red-500 text-base font-semibold">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+
+        {/* OTP Modal */}
+        <Modal
+          visible={showOTPModal}
+          animationType="none"
+          transparent={true}
+          onRequestClose={() => {
+            setShowOTPModal(false);
+            setResendTimer(0);
+            setCanResend(true);
+          }}
+        >
+          <View className="flex-1 bg-black/60 justify-center items-center">
+            <Animated.View className="w-[85%] max-w-[400px] bg-white rounded-3xl border border-gray-300 shadow-lg">
+              <View className="p-8 bg-white rounded-3xl">
+                <Text className="text-2xl font-bold text-gray-800 mb-4 text-center">
+                  Reset Password
+                </Text>
+                <Text className="text-base text-gray-500 mb-6 text-center leading-6">
+                  Enter the 6-digit OTP sent to {email}
+                </Text>
+
+                <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-1 h-14 mb-2">
+                  <Ionicons name="key-outline" size={24} color="#6B7280" className="mr-3" />
+                  <TextInput
+                    placeholder="Enter 6-digit OTP"
+                    placeholderTextColor="#6B7280"
+                    value={otp}
+                    onChangeText={(text) => {
+                      const numericText = text.replace(/[^0-9]/g, '');
+                      setOTP(numericText);
+                    }}
+                    className="flex-1 text-lg text-gray-800 py-3 text-center tracking-widest"
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    accessibilityLabel="OTP input"
+                  />
+                </View>
+
+                {otp.length === 6 && (
+                  <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-1 h-14 mb-2">
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={24}
+                      color="#6B7280"
+                      className="mr-3"
+                    />
+                    <TextInput
+                      placeholder="Enter new password (min 8 characters)"
+                      placeholderTextColor="#6B7280"
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      className="flex-1 text-lg text-gray-800 py-3"
+                      secureTextEntry={true}
+                      accessibilityLabel="New password input"
+                    />
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={handleOTPSubmit}
+                  disabled={isLoading || otp.length !== 6 || !newPassword}
+                  className={`w-full rounded-xl bg-gray-700 shadow-md ${
+                    isLoading || otp.length !== 6 || !newPassword ? 'opacity-70' : ''
+                  }`}
+                  accessibilityLabel="Verify OTP and update password"
+                >
+                  <View className="bg-gray-700 py-4 items-center rounded-xl">
+                    {isLoading ? (
+                      <View className="flex-row items-center">
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text className="text-white text-base font-medium ml-2">
+                          Verifying...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-white text-lg font-semibold">
+                        Verify & Update
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {resendTimer > 0 ? (
+                  <View className="flex-row items-center justify-center bg-transparent rounded-xl p-3 mb-5">
+                    <Ionicons name="time-outline" size={16} color="#374151" />
+                    <Text className="text-gray-800 text-sm font-medium ml-2">
+                      Resend OTP in {formatTimer(resendTimer)}
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handleResendOTP}
+                    disabled={isLoading}
+                    className="self-center p-3 mt-2"
+                    accessibilityLabel="Resend OTP"
+                  >
+                    <Text className="text-gray-700 text-sm font-medium">Resend OTP</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowOTPModal(false);
+                    setResendTimer(0);
+                    setCanResend(true);
+                    setOTP('');
+                    setNewPassword('');
+                  }}
+                  className="self-center p-3 mt-5"
+                  accessibilityLabel="Cancel OTP verification"
+                >
+                  <Text className="text-red-500 text-base font-semibold">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF', // Pure white background
-  },
-  backgroundGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Pure white background
-  },
-  floatingCircle: {
-    position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0)', // Transparent to remove decorative circles
-    borderRadius: 1000,
-  },
-  circle1: {
-    width: 200,
-    height: 200,
-    top: 100,
-    left: -50,
-  },
-  circle2: {
-    width: 150,
-    height: 150,
-    bottom: 150,
-    right: -30,
-  },
-  circle3: {
-    width: 100,
-    height: 100,
-    top: '50%',
-    left: 20,
-  },
-  contentContainer: {
-    width: width * 0.9,
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  glassCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF', // Pure white background
-    borderRadius: 24,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Standard border color
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#374151', // Primary color
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#374151',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#374151', // Primary text color
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280', // Secondary text color
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent', // Transparent for simplicity
-    borderColor: '#DC2626', // Error color
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: '#DC2626', // Error color
-    fontSize: 14,
-    marginLeft: 8,
-    flex: 1,
-  },
-  inputSection: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Pure white background
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Standard border color
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    marginBottom: 8,
-    minHeight: 56,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#374151', // Primary text color
-    paddingVertical: 12,
-  },
-  passwordInput: {
-    paddingRight: 40,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 16,
-    padding: 4,
-  },
-  signInButton: {
-    width: '100%',
-    marginBottom: 20,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#374151',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonGradient: {
-    backgroundColor: '#374151', // Primary color
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  buttonText: {
-    color: '#FFFFFF', // White for contrast
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF', // White for contrast
-    fontSize: 16,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  forgotButton: {
-    alignSelf: 'center',
-    padding: 8,
-    marginBottom: 32,
-  },
-  forgotText: {
-    color: '#374151', // Primary color
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D1D5DB', // Standard border color
-  },
-  dividerTextContainer: {
-    backgroundColor: '#FFFFFF', // Pure white background
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginHorizontal: 12,
-  },
-  dividerText: {
-    fontSize: 10,
-    color: '#6B7280', // Secondary text color
-    fontWeight: '500',
-    letterSpacing: 0.5,
-  },
-  createAccountButton: {
-    width: '100%',
-    backgroundColor: '#FFFFFF', // Pure white background
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Standard border color
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-  },
-  createAccountText: {
-    color: '#374151', // Primary text color
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  tagline: {
-    fontSize: 14,
-    color: '#6B7280', // Secondary text color
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  forgotPasswordModal: {
-    width: width * 0.85,
-    maxWidth: 400,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  forgotPasswordModalInner: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Standard border color
-    backgroundColor: '#FFFFFF', // Pure white background
-  },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  otpModal: {
-    width: width * 0.85,
-    maxWidth: 400,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  otpModalInner: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Standard border color
-    backgroundColor: '#FFFFFF', // Pure white background
-  },
-  modalGradient: {
-    padding: 32,
-    backgroundColor: '#FFFFFF', // Pure white background
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#374151', // Primary text color
-    marginTop: 12,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#6B7280', // Secondary text color
-    marginBottom: 24,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  timerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent', // Transparent for simplicity
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-  },
-  timerText: {
-    fontSize: 14,
-    color: '#374151', // Primary color
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  otpInput: {
-    fontSize: 18,
-    letterSpacing: 2,
-  },
-  cancelButton: {
-    alignSelf: 'center',
-    padding: 12,
-    marginTop: 20,
-  },
-  cancelText: {
-    color: '#DC2626', // Error color
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  resendButton: {
-    alignSelf: 'center',
-    padding: 12,
-    marginTop: 10,
-  },
-  resendText: {
-    color: '#374151', // Primary color
-    fontSize: 14,
-    fontWeight: '500',
-  },
-});

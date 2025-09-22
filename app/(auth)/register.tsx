@@ -17,14 +17,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../context/AuthContext';
+import { signUp } from '@/services/authService';
 
 const { width } = Dimensions.get('window');
 
 export default function SignUp() {
   const router = useRouter();
-  const { signup } = useAuth();
-
+  //const { signup } = useAuth();
   interface FormData {
     name: string;
     email: string;
@@ -45,6 +44,7 @@ export default function SignUp() {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
+
 
   const updateFormData = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -78,7 +78,7 @@ export default function SignUp() {
 
     try {
       setIsLoading(true);
-      await signup(formData.email, formData.password);
+      await signUp(formData.email, formData.password);
       router.push('/register');
     } catch (err) {
       setErrors(prev => ({ ...prev, general: (err as Error).message || 'Registration failed' }));
