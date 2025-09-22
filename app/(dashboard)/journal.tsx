@@ -23,8 +23,9 @@ import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { auth, db } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import * as Notifications from "expo-notifications";
-import { useThemeColors } from "@/hooks/useThemeColors"; // Import the theme hook
+import { useThemeColors } from "@/hooks/useThemeColors";
 
+// Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -48,7 +49,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [showReminder, setShowReminder] = useState(false);
   const moodsToDisplay = moods.length > 0 ? moods : defaultMoods;
-  
+
   // Use theme colors
   const {
     backgroundClass,
@@ -99,7 +100,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         Alert.alert(
           "Permission Required",
           "Please enable notifications in settings to receive journal reminders.",
-          [{ text: "OK" }]
+          [{ text: "OK", onPress: () => closeModal() }] // Close modal on permission denial
         );
       }
     };
@@ -117,9 +118,9 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     try {
       const today = new Date().toLocaleDateString("en-CA");
       const hasEntry = journalEntries.some((entry) => entry.date === today);
-      
+
       console.log("Scheduling notification - Has entry for today:", hasEntry);
-      
+
       await Notifications.cancelAllScheduledNotificationsAsync();
       console.log("Cancelled all previous notifications");
 
@@ -131,9 +132,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       // Set notification for 11:59 PM today
       const notificationTime = new Date();
       notificationTime.setHours(23, 59, 0, 0);
-      
-      // For testing: show notification in 10 seconds
-      // const notificationTime = new Date(Date.now() + 10 * 1000);
 
       console.log("Notification scheduled for:", notificationTime);
 
@@ -148,7 +146,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       console.log("Notification scheduled successfully");
     } catch (error) {
       console.error("Notification scheduling error:", error);
-      Alert.alert("Error", "Failed to schedule notification.");
+      Alert.alert(
+        "Error",
+        "Failed to schedule notification.",
+        [{ text: "OK", onPress: () => closeModal() }] // Close modal on error
+      );
     }
   }, [journalEntries]);
 
@@ -156,7 +158,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
     console.log("Current User:", auth.currentUser?.uid);
     if (!auth.currentUser) {
       console.log("User not logged in");
-      Alert.alert("Error", "Please log in to view your journal.");
+      Alert.alert(
+        "Authentication Required",
+        "Please log in to view your journal entries.",
+        [{ text: "OK", onPress: () => closeModal() }] // Close modal on auth error
+      );
       return;
     }
 
@@ -170,7 +176,7 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
         console.log("Fetched journal entries:", allJournals);
         setJournalEntries(allJournals);
         setTempEntries(allJournals);
-        
+
         // Update showReminder based on today's entry
         const today = new Date().toLocaleDateString("en-CA");
         const hasEntry = allJournals.some((entry) => entry.date === today);
@@ -178,7 +184,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       },
       (error) => {
         console.error("Firestore error:", error);
-        Alert.alert("Error", "Failed to fetch journal entries. Please try again.");
+        Alert.alert(
+          "Connection Error",
+          "Failed to fetch journal entries. Please check your connection and try again.",
+          [{ text: "OK", onPress: () => closeModal() }] // Close modal on connection error
+        );
       }
     );
 
@@ -206,6 +216,12 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
       setModalVisible(true);
       animateModal(true);
       setIsFirstTime(false);
+
+      Alert.alert(
+        "Daily Prompt",
+        "You've received a new journal prompt!",
+        [{ text: "Start Writing", onPress: () => {} }] // Keep modal open for prompt
+      );
     }
   }, [prompt, isFirstTime]);
 
@@ -262,26 +278,44 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (newEntry.title && newEntry.content && newEntry.mood) {
-      console.log("Submitting new journal entry:", newEntry);
-      try {
-        const newId = (tempEntries.length + 1).toString();
-        await createJournal({ ...newEntry, userId: auth.currentUser?.uid });
-        setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
-        closeModal();
-        
-        // Update showReminder after submitting
-        const today = new Date().toLocaleDateString("en-CA");
-        if (newEntry.date === today) {
-          setShowReminder(false);
-        }
-      } catch (error) {
-        console.error("Error saving journal entry:", error);
-        Alert.alert("Error", "Failed to save journal entry.");
-      }
-    } else {
-      console.log("Form incomplete:", newEntry);
-      Alert.alert("Error", "Please fill in all fields (title, content, mood).");
+    if (!newEntry.title || !newEntry.content || !newEntry.mood) {
+      Alert.alert(
+        "Incomplete Entry",
+        "Please fill in all fields: title, content, and select a mood.",
+        [{ text: "OK", onPress: () => {} }] // Keep modal open to continue editing
+      );
+      return;
+    }
+
+    console.log("Submitting new journal entry:", newEntry);
+    try {
+      const newId = (tempEntries.length + 1).toString();
+      await createJournal({ ...newEntry, userId: auth.currentUser?.uid });
+      setTempEntries([{ ...newEntry, id: newId }, ...tempEntries]);
+
+      Alert.alert(
+        "Success!",
+        "Your journal entry has been saved successfully.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              closeModal();
+              const today = new Date().toLocaleDateString("en-CA");
+              if (newEntry.date === today) {
+                setShowReminder(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("Error saving journal entry:", error);
+      Alert.alert(
+        "Save Failed",
+        "There was an error saving your journal entry. Please try again.",
+        [{ text: "OK", onPress: () => closeModal() }] // Close modal on save error
+      );
     }
   };
 
@@ -301,17 +335,60 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
   };
 
   const closeModal = () => {
-    console.log("Closing modal");
-    setModalVisible(false);
-    animateModal(false);
-    setNewEntry({
-      id: "",
-      title: "",
-      content: "",
-      date: new Date().toLocaleDateString("en-CA"),
-      mood: "",
-    });
-    setDate(new Date());
+    if (newEntry.title || newEntry.content || newEntry.mood) {
+      Alert.alert(
+        "Discard Changes?",
+        "You have unsaved changes. Are you sure you want to discard them?",
+        [
+          { text: "Cancel", style: "cancel", onPress: () => {} },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => {
+              console.log("Closing modal and discarding changes");
+              setModalVisible(false);
+              animateModal(false);
+              setNewEntry({
+                id: "",
+                title: "",
+                content: "",
+                date: new Date().toLocaleDateString("en-CA"),
+                mood: "",
+              });
+              setDate(new Date());
+            },
+          },
+        ]
+      );
+    } else {
+      console.log("Closing modal");
+      setModalVisible(false);
+      animateModal(false);
+      setNewEntry({
+        id: "",
+        title: "",
+        content: "",
+        date: new Date().toLocaleDateString("en-CA"),
+        mood: "",
+      });
+      setDate(new Date());
+    }
+  };
+
+  const handleViewEntry = (entry: JournalEntry) => {
+    if (setCurrentScreen) {
+      setCurrentScreen(`journal/${entry.id}`);
+    } else {
+      Alert.alert(
+        "Entry Details",
+        `Title: ${entry.title}\nDate: ${entry.date}\nMood: ${
+          moodsToDisplay.find((m) => m.value === entry.mood)?.label || "Unknown"
+        }\n\nContent: ${entry.content.substring(0, 200)}${
+          entry.content.length > 200 ? "..." : ""
+        }`,
+        [{ text: "OK", onPress: () => closeModal() }] // Close modal when viewing entry details
+      );
+    }
   };
 
   return (
@@ -334,7 +411,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               <TextInput
                 className={`border rounded-lg p-3 mb-4 ${inputClass}`}
                 placeholder="Title"
-                placeholderTextColor={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#6B7280'}
+                placeholderTextColor={
+                  textSecondaryClass.includes("text-gray-300")
+                    ? "#D1D5DB"
+                    : "#6B7280"
+                }
                 value={newEntry.title}
                 onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
                 accessibilityLabel="Enter journal entry title"
@@ -342,7 +423,11 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
               <TextInput
                 className={`border rounded-lg p-3 mb-4 h-32 ${inputClass}`}
                 placeholder="Write your thoughts..."
-                placeholderTextColor={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#6B7280'}
+                placeholderTextColor={
+                  textSecondaryClass.includes("text-gray-300")
+                    ? "#D1D5DB"
+                    : "#6B7280"
+                }
                 value={newEntry.content}
                 onChangeText={(text) =>
                   setNewEntry({ ...newEntry, content: text })
@@ -453,8 +538,12 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             </View>
           </Animated.View>
         </Modal>
-        <View className={`flex-row justify-between items-center px-4 py-4 border-b ${headerClass} ${borderClass}`}>
-          <Text className={`text-xl font-semibold ${headerTextClass}`}>Journal</Text>
+        <View
+          className={`flex-row justify-between items-center px-4 py-4 border-b ${headerClass} ${borderClass}`}
+        >
+          <Text className={`text-xl font-semibold ${headerTextClass}`}>
+            Journal
+          </Text>
         </View>
         <ScrollView className="p-4">
           {showReminder && (
@@ -480,37 +569,59 @@ const JournalScreen: React.FC<JournalScreenProps> = ({
             accessibilityLabel="Add new journal entry"
             accessibilityRole="button"
           >
-            <Text className={`text-base font-medium text-center ${buttonTextClass}`}>
+            <Text
+              className={`text-base font-medium text-center ${buttonTextClass}`}
+            >
               + New Journal Entry
             </Text>
           </TouchableOpacity>
-          {tempEntries.map((entry) => (
-            <TouchableOpacity
-              key={entry.id}
-              className={`p-4 rounded-xl border mb-3 ${cardClass} ${borderClass}`}
-              onPress={() => setCurrentScreen?.(`journal/${entry.id}`)}
-              accessibilityLabel={`View journal entry: ${entry.title}`}
-              accessibilityRole="button"
-            >
-              <View className="flex-row justify-between mb-2">
-                <Text className={`text-sm font-medium ${textClass}`}>
-                  {entry.title}
-                </Text>
-                <Text className={`text-xs ${textSecondaryClass}`}>{entry.date}</Text>
-              </View>
-              <Text className={`text-xs mb-2 ${textSecondaryClass}`} numberOfLines={2}>
-                {entry.content}
+          {tempEntries.length === 0 ? (
+            <View className="p-6 rounded-xl border mb-3 bg-gray-50 border-gray-200">
+              <Text className="text-center text-gray-500">
+                No journal entries yet. Start by adding your first entry!
               </Text>
-              <View className="flex-row justify-between items-center">
-                <Text className={`text-xs ${textSecondaryClass}`}>
-                  {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
-                  {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
-                    "Unknown Mood"}
+            </View>
+          ) : (
+            tempEntries.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                className={`p-4 rounded-xl border mb-3 ${cardClass} ${borderClass}`}
+                onPress={() => handleViewEntry(entry)}
+                accessibilityLabel={`View journal entry: ${entry.title}`}
+                accessibilityRole="button"
+              >
+                <View className="flex-row justify-between mb-2">
+                  <Text className={`text-sm font-medium ${textClass}`}>
+                    {entry.title}
+                  </Text>
+                  <Text className={`text-xs ${textSecondaryClass}`}>
+                    {entry.date}
+                  </Text>
+                </View>
+                <Text
+                  className={`text-xs mb-2 ${textSecondaryClass}`}
+                  numberOfLines={2}
+                >
+                  {entry.content}
                 </Text>
-                <ChevronRight size={14} color={textSecondaryClass.includes('text-gray-300') ? '#D1D5DB' : '#9CA3AF'} />
-              </View>
-            </TouchableOpacity>
-          ))}
+                <View className="flex-row justify-between items-center">
+                  <Text className={`text-xs ${textSecondaryClass}`}>
+                    {moodsToDisplay.find((m) => m.value === entry.mood)?.emoji}{" "}
+                    {moodsToDisplay.find((m) => m.value === entry.mood)?.label ||
+                      "Unknown Mood"}
+                  </Text>
+                  <ChevronRight
+                    size={14}
+                    color={
+                      textSecondaryClass.includes("text-gray-300")
+                        ? "#D1D5DB"
+                        : "#9CA3AF"
+                    }
+                  />
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
