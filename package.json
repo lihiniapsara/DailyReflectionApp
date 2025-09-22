@@ -1,6 +1,15 @@
 {
   "name": "dailyreflectionapp",
   "version": "1.0.0",
+  "android": {
+    "package": "com.lihini.dailyreflectionapp",
+    "versionCode": 1
+  },
+  "extra": {
+    "eas": {
+      "projectId": "b1c3f0f3-2f4e-4dcb-8e2e-5f3c8e4e6b7a"
+    }
+  },
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -67,4 +76,5 @@
     }
   },
   "private": true
+  
 }

@@ -1,44 +1,58 @@
+Got it ✅ – meka thamai oyage project ekata **full, polished README.md file eka**.
+Meka **APK link + Screenshot + YouTube video demo** okkoma included karala dila thiyenawa.
 
+```markdown
+# 🌟 DailyReflectionApp
 
-# DailyReflectionApp
+A cross-platform mobile application built with **React Native (Expo)** that helps you reflect on your daily experiences, manage notes, and track personal growth.  
 
-A cross-platform mobile application built with **React Native (Expo)** that allows users to reflect on their daily experiences, manage notes, and track personal growth.
+---
 
 ## 🚀 Features
 
-* 📓 Daily reflections journaling
-* 🔐 User authentication (login & signup)
-* ☁️ Data persistence with backend integration
-* 🎨 Dark/Light theme support
-* ⚡ Smooth and responsive UI
+* 📓 Daily reflections journaling  
+* 🔐 User authentication (login & signup)  
+* ☁️ Data persistence with backend integration  
+* 🎨 Dark/Light theme support  
+* 🛎️ Daily notification reminders  
+* ⚡ Smooth and responsive UI  
+
+---
 
 ## 🛠️ Tech Stack
 
-* [React Native](https://reactnative.dev/) (Expo)
-* [Expo Router](https://expo.github.io/router/)
-* Context API for state management
-* Firebase / Supabase (for authentication & storage) *(adjust based on your actual backend)*
+* [React Native](https://reactnative.dev/) (Expo)  
+* [Expo Router](https://expo.github.io/router/)  
+* Context API for state management  
+* Firebase / Supabase (for authentication & storage) 
+
+---
 
 ## 📂 Project Structure
 
 ```
+
 DailyReflectionApp/
-│-- app/               # App routes (Expo Router)  
-│-- components/        # Reusable UI components  
-│-- context/           # Auth, Loader, Theme contexts  
-│-- assets/            # Images, icons, fonts  
-│-- global.css         # Global styles  
-│-- package.json       # Dependencies & scripts  
-│-- README.md          # Project documentation  
-```
+│-- app/               # App routes (Expo Router)
+│-- components/        # Reusable UI components
+│-- context/           # Auth, Loader, Theme contexts
+│-- assets/            # Images, icons, fonts
+│-- release/           # APK builds
+│-- global.css         # Global styles
+│-- package.json       # Dependencies & scripts
+│-- README.md          # Project documentation
+
+````
+
+---
 
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
 
-* Node.js (>= 18.x)
-* Expo CLI (`npm install -g expo-cli`)
-* Git
+* Node.js (>= 18.x)  
+* Expo CLI (`npm install -g expo-cli`)  
+* Git  
 
 ### Steps
 
@@ -47,7 +61,7 @@ DailyReflectionApp/
    ```bash
    git clone https://github.com/lihiniapsara/DailyReflectionApp.git
    cd DailyReflectionApp
-   ```
+````
 
 2. Install dependencies:
 
@@ -68,13 +82,41 @@ DailyReflectionApp/
    * Scan QR code in **Expo Go** app (iOS/Android)
    * Or press `a` for Android Emulator / `i` for iOS Simulator
 
+---
+
+## 📱 Screenshots
+
+### Journal Reminder Notification
+
+Here’s a preview of the notification reminder feature:
+
+![Journal Reminder Notification](./assets/journal_reminder.jpg)
+
+---
+
+## 📦 Download APK
+
+👉 [Download DailyReflectionApp APK](./release/DailyReflectionApp.apk)
+
+
+---
+
+## 🎥 Demo Video
+
+Check out the demo of **DailyReflectionApp** on YouTube:
+
+[![DailyReflectionApp Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+
+
+---
+
 ## 🧪 Running Tests
-
-
 
 ```bash
 npm test
 ```
+
+---
 
 ## 📦 Build for Production
 
@@ -83,6 +125,8 @@ npx expo build:android
 npx expo build:ios
 ```
 
+---
+
 ## 🤝 Contributing
 
 1. Fork the repo
@@ -90,3 +134,20 @@ npx expo build:ios
 3. Commit changes (`git commit -m "Add new feature"`)
 4. Push to branch (`git push origin feature-name`)
 5. Create a Pull Request
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License – feel free to use and modify as needed.
+
+---
+
+✨ *Start your journey of self-reflection today with DailyReflectionApp!*
+
+```
+
+---
+ 
+
+```
