@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert // Import Alert from react-native
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -79,8 +80,25 @@ export default function SignUp() {
     try {
       setIsLoading(true);
       await signUp(formData.email, formData.password);
-      router.push('/register');
+      
+      // Show success alert
+      Alert.alert(
+        "Success!",
+        "Your account has been created successfully.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.push('/register')
+          }
+        ]
+      );
     } catch (err) {
+      // Show error alert
+      Alert.alert(
+        "Registration Failed",
+        (err as Error).message || 'Something went wrong. Please try again.',
+        [{ text: "OK" }]
+      );
       setErrors(prev => ({ ...prev, general: (err as Error).message || 'Registration failed' }));
     } finally {
       setIsLoading(false);
@@ -221,6 +239,7 @@ export default function SignUp() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
