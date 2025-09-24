@@ -105,7 +105,7 @@ Here’s a preview of the notification reminder feature:
 
 Check out the demo of **DailyReflectionApp** on YouTube:
 
-[![DailyReflectionApp Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/FWKGn3MbtXw)
+[![DailyReflectionApp Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/CzcxwLvA9io?si=RWjqpfIPjifmW9dn)
 
 
 ---
