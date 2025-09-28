@@ -1,5 +1,4 @@
-Got it ✅ – meka thamai oyage project ekata **full, polished README.md file eka**.
-Meka **APK link + Screenshot + YouTube video demo** okkoma included karala dila thiyenawa.
+
 
 ```markdown
 # 🌟 DailyReflectionApp
@@ -27,22 +26,6 @@ A cross-platform mobile application built with **React Native (Expo)** that help
 * Firebase / Supabase (for authentication & storage) 
 
 ---
-
-## 📂 Project Structure
-
-```
-
-DailyReflectionApp/
-│-- app/               # App routes (Expo Router)
-│-- components/        # Reusable UI components
-│-- context/           # Auth, Loader, Theme contexts
-│-- assets/            # Images, icons, fonts
-│-- release/           # APK builds
-│-- global.css         # Global styles
-│-- package.json       # Dependencies & scripts
-│-- README.md          # Project documentation
-
-````
 
 ---
 
@@ -103,10 +86,9 @@ Here’s a preview of the notification reminder feature:
 
 ## 🎥 Demo Video
 
-Check out the demo of **DailyReflectionApp** on YouTube:
+Watch the demo of **DailyReflectionApp** on YouTube:  
 
-[![DailyReflectionApp Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/CzcxwLvA9io?si=RWjqpfIPjifmW9dn)
-
+[![DailyReflectionApp Demo](https://img.youtube.com/vi/CFrTsumugq4/0.jpg)](https://youtu.be/CFrTsumugq4?si=6sUzW7uFeyKkFHL3)
 
 ---
 
@@ -145,9 +127,6 @@ This project is licensed under the MIT License – feel free to use and modify a
 
 ✨ *Start your journey of self-reflection today with DailyReflectionApp!*
 
-```
 
----
  
 
-```
